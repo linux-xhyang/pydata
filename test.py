@@ -1,5 +1,7 @@
 #!/usr/bin/python
 import numpy as np
+import pandas as pd
+import bokeh as bo
 
 def voltage2temp( voltage ):
     resistor = (voltage/10)/(3.27 - voltage/1000)
@@ -14,3 +16,6 @@ def voltage2temp( voltage ):
 print "hello"
 voltage2temp(600)
 
+
+src=pd.DataFrame({'voltage':np.linspace(0, 3000, 300)})
+arrary=src['voltage'].values
