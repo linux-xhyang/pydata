@@ -139,7 +139,7 @@ def find_next_video_to_play():
     time.sleep(1)
 
 def video_stress_test():
-    global next_indexdex
+    global next_index
     next_index = 0
     while True:
         if(home_select() == False):
