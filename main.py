@@ -128,22 +128,36 @@ def find_and_play_video():
     else:
         return False
 
+global next_index
+def find_next_video_to_play():
+    global next_index
+    i = next_index;
+    while i > 0:
+        driver.press_keycode(22)
+        i = i -1
+    next_index = next_index + 1
+    time.sleep(1)
+
 def video_stress_test():
-   while True:
-       if(home_select() == False):
-           print "Home not found"
-           time.sleep(2)
-           continue
-       else:
-           if(select_by_text("电影")):
-               pos = find_object_by_image("image/ambition_dianying.png")
-               if(pos):
-                   tap_by_position(pos)
-                   time.sleep(1)
-                   if(find_and_play_video()):
-                       time.sleep(1000)
-                   else:
-                       driver.press_keycode(66)
-                       time.sleep(1)
-                       if(find_and_play_video()):
-                           time.sleep(1000)
+    global next_indexdex
+    next_index = 0
+    while True:
+        if(home_select() == False):
+            print "Home not found"
+            time.sleep(2)
+            continue
+        else:
+            if(select_by_text("电影")):
+                pos = find_object_by_image("image/ambition_dianying.png")
+                if(pos):
+                    tap_by_position(pos)
+                    time.sleep(1)
+                    find_and_play_video()
+                    if(find_and_play_video()):
+                        time.sleep(1000)
+                    else:
+                        driver.press_keycode(66)
+                        time.sleep(1)
+                        find_and_play_video()
+                        if(find_and_play_video()):
+                            time.sleep(20)
