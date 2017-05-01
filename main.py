@@ -3,28 +3,40 @@ from appium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 import time
 import random
-import os
+import os,sys
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+# Python 2.x & 3.x compatible
+from distutils.log import warn as printf
 
 backlight = 2
 des = {}
 des['platformName'] = 'Android'
 des['platformVersion'] = '6.0'
-des['deviceName'] = '10.235.178.230:5555'
+#des['deviceName'] = '10.235.178.230:5555'
+des['deviceName'] = '192.168.1.33:5555'
 des['newCommandTimeout'] = 0
 des['appPackage'] = "com.mitv.tvhome" #"com.xiaomi.mitv.settings"
 #des['appActivity'] = "com.xiaomi.mitv.settings.entry.MainActivity"
 des['appActivity'] = "com.mitv.tvhome.MainActivity"
 des['noReset'] = True
-des['udid'] = '10.235.178.230:5555'
+des['udid'] = '192.168.1.33:5555'
 des['stopAppOnReset'] = False
 des['dontStopAppOnReset'] = True
 #des['app'] = "/home/duokan/xhyang/system/vendor/app/TvHome/TvHome.apk"
 #des['app'] = "/home/duokan/xhyang/system/app/MiTVSettings2/MiTVSettings2.apk" 
 driver = webdriver.Remote('http://localhost:4723/wd/hub', des)
 #el = driver.find_elements_by_android_uiautomator('new UiSelector().clickable(true)')
+
+def cur_file_dir():
+     #获取脚本路径
+     path = sys.path[0]
+     #判断为脚本文件还是py2exe编译后的文件，如果是脚本文件，则返回的是脚本的目录，如果是py2exe编译后的文件，则返回的是编译后的文件路径
+     if os.path.isdir(path):
+         return path
+     elif os.path.isfile(path):
+         return os.path.dirname(path)
 
 def home_select():
     driver.press_keycode(3)
@@ -38,15 +50,15 @@ def backlight_view():
 def backlight_set(brightness):
     try:
         if brightness == 0:
-            print "节能模式"
+            printf("节能模式")
             driver.find_element_by_android_uiautomator('new UiSelector().text("节能模式")').click()
             driver.find_element_by_android_uiautomator('new UiSelector().text("节能模式")').click()
         elif brightness == 1:
-            print "标准模式"
+            printf("标准模式")
             driver.find_element_by_android_uiautomator('new UiSelector().text("标准模式")').click()
             driver.find_element_by_android_uiautomator('new UiSelector().text("标准模式")').click()
         else :
-            print "高亮模式"
+            printf("高亮模式")
             driver.find_element_by_android_uiautomator('new UiSelector().text("高亮模式")').click()
             driver.find_element_by_android_uiautomator('new UiSelector().text("高亮模式")').click()
         time.sleep(1);
@@ -92,17 +104,18 @@ def find_object_by_image(image):
 
     # cv2.imwrite('res.png',img_rgb)
     if(len(loc[0]) and len(loc[1])):
-        return [(loc[1][-1],loc[0][-1])]
+        return [(int(loc[1][-1]),int(loc[0][-1]))]
     else:
         return None
 
 def select_by_text(text):
     try:
         cstr = 'new UiSelector().text("%s")' % text
-        print cstr
+        printf(cstr)
         els = driver.find_element_by_android_uiautomator(cstr)
         if(els):
             els.click();
+            time.sleep(1)
             if(els.is_selected()):
                 return True
             else:
@@ -112,8 +125,28 @@ def select_by_text(text):
     except NoSuchElementException:
         return False
 
+def select_and_play_by_text(text):
+    try:
+        cstr = 'new UiSelector().text("%s")' % text
+        printf(cstr)
+        els = driver.find_element_by_android_uiautomator(cstr)
+        if(els):
+            els.click();
+            time.sleep(1)
+            if(driver.current_activity == 'com.miui.videoplayer.VideoPlayerActivity'):
+                printf("found video and play")
+                return True
+            else:
+                printf("not found video and play")
+                return False
+        else:
+            return False
+    except NoSuchElementException:
+        return False
+    
 def tap_by_position(pos):
     pre = driver.current_activity
+    printf(pos)
     driver.tap(pos,10)
     time.sleep(1)
     post = driver.current_activity
@@ -121,10 +154,13 @@ def tap_by_position(pos):
         driver.press_keycode(66)
 
 def find_and_play_video():
-    pos = find_object_by_image("image/Play.png")
-    if(pos):
-        tap_by_position(pos)
-        return True
+    if(driver.current_activity == '.DetailsActivity'):
+        if(select_and_play_by_text('播放') or select_and_play_by_text('继续')):
+            return True
+        pos = find_object_by_image("image/Play.png")
+        if(pos):
+            tap_by_position(pos)
+            return True
     else:
         return False
 
@@ -134,8 +170,10 @@ def find_next_video_to_play():
     i = next_index;
     while i > 0:
         driver.press_keycode(22)
-        i = i -1
+        i = i - 1
     next_index = next_index + 1
+    printf('next_index:')
+    printf(next_index)
     time.sleep(1)
 
 def video_stress_test():
@@ -143,7 +181,7 @@ def video_stress_test():
     next_index = 0
     while True:
         if(home_select() == False):
-            print "Home not found"
+            printf("Home not found")
             time.sleep(2)
             continue
         else:
@@ -152,12 +190,15 @@ def video_stress_test():
                 if(pos):
                     tap_by_position(pos)
                     time.sleep(1)
-                    find_and_play_video()
+                    find_next_video_to_play()
                     if(find_and_play_video()):
-                        time.sleep(1000)
+                        printf("play video 100s")
+                        time.sleep(100)
                     else:
                         driver.press_keycode(66)
                         time.sleep(1)
-                        find_and_play_video()
                         if(find_and_play_video()):
-                            time.sleep(20)
+                            printf("play video 200s")
+                            time.sleep(200)
+        
+
