@@ -7,6 +7,7 @@ import os,sys
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+import imutils
 # Python 2.x & 3.x compatible
 from distutils.log import warn as printf
 
@@ -14,14 +15,15 @@ backlight = 2
 des = {}
 des['platformName'] = 'Android'
 des['platformVersion'] = '6.0'
-#des['deviceName'] = '10.235.178.230:5555'
-des['deviceName'] = '192.168.1.33:5555'
+des['deviceName'] = '10.235.178.230:5555'
+#des['deviceName'] = '192.168.1.33:5555'
 des['newCommandTimeout'] = 0
 des['appPackage'] = "com.mitv.tvhome" #"com.xiaomi.mitv.settings"
 #des['appActivity'] = "com.xiaomi.mitv.settings.entry.MainActivity"
 des['appActivity'] = "com.mitv.tvhome.MainActivity"
 des['noReset'] = True
-des['udid'] = '192.168.1.33:5555'
+des['udid'] = '10.235.178.230:5555'
+#des['udid'] = '192.168.1.33:5555'
 des['stopAppOnReset'] = False
 des['dontStopAppOnReset'] = True
 #des['app'] = "/home/duokan/xhyang/system/vendor/app/TvHome/TvHome.apk"
@@ -85,22 +87,44 @@ def find_object_by_image(image):
 
     img_rgb = cv2.imread('tmp.png')
     img_gray = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2GRAY)
-    template = cv2.imread(image,0)
+    template = cv2.imread(image)
+    template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     w, h = template.shape[::-1]
+    printf(w)
+    printf(h)
+    found = None
 
-    res = cv2.matchTemplate(img_gray,template,cv2.TM_CCOEFF_NORMED)
-    threshold = 0.8
-    loc = np.where( res >= threshold)
+    printf(template)
+    for scale in np.linspace(0.8,1.6,32):
+         resized = imutils.resize(template, width = int(template.shape[1] * scale))
+         r = img_gray.shape[1] / float(resized.shape[1])
 
-    # for debug
-    # for pt in zip(*loc[::-1]):
-    #     cv2.rectangle(img_rgb, pt, (pt[0] + w, pt[1] + h), (0,0,255), 2)
+         res = cv2.matchTemplate(img_gray,resized,cv2.TM_CCOEFF_NORMED)
+         threshold = 0.8
+         loc = np.where( res >= threshold)
 
-    # cv2.imwrite('res.png',img_rgb)
-    if(len(loc[0]) and len(loc[1])):
-        return [(int(loc[1][-1]),int(loc[0][-1]))]
-    else:
-        return None
+         if(len(loc[0]) and len(loc[1])):
+              return [(int(loc[1][-1]),int(loc[0][-1]))]
+
+def el_find_by_image_pos(pos):
+     el = driver.find_elements_by_class_name('android.widget.ImageView');
+     if el != None:
+          for els in el:
+               if
+     else:
+
+def swipe_by_direction(dir):
+     width = driver.get_window_size()['width']
+     height = driver.get_window_size()['height']
+     if dir == 'right':
+          driver.swipe(0.20, height*0.50, width*0.80, height*0.50, 1000)
+     elif dir == 'left':
+          driver.swipe(width*0.80, height*0.50, width*0.20, height*0.50, 1000)
+     elif dir == 'up':
+          driver.swipe(width*0.50, height*0.70, width*0.50, height*0.30, 1000)
+     else:
+          driver.swipe(width*0.50, height*0.30, width*0.50, height*0.70, 1000)
+
 
 def select_by_text(text):
     try:
