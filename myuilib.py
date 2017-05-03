@@ -133,7 +133,8 @@ def is_player_activity():
     player_activity = ['.PlayerActivity',
                        'com.miui.videoplayer.VideoPlayerActivity',
                        'com.ktcp.video.activity.TVPlayerActivity',
-                       'com.starcor.hunan.MplayerV2']
+                       'com.starcor.hunan.MplayerV2',
+                       'com.sohuott.tv.vod.activity.PlayerSohuActivity']
     activity = driver.current_activity
     if activity in player_activity:
         return activity

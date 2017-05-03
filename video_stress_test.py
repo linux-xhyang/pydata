@@ -92,7 +92,8 @@ method_key = {'.MainActivity' : on_main_activity,
               'com.miui.videoplayer.VideoPlayerActivity' : on_player_activity,
               '.PlayerActivity' : on_player_activity,
               'com.ktcp.video.activity.TVPlayerActivity' : on_player_activity,
-              'com.starcor.hunan.MplayerV2' : on_player_activity}
+              'com.starcor.hunan.MplayerV2' : on_player_activity,
+              'com.sohuott.tv.vod.activity.PlayerSohuActivity' : on_player_activity}
 
 def run_method():
      if driver.current_activity in method_key:
