@@ -129,7 +129,7 @@ def home_select(driver):
     driver.press_keycode(3)
     return driver.wait_activity(".MainActivity",10,1)
 
-def is_player_activity():
+def is_player_activity(driver):
     player_activity = ['.PlayerActivity',
                        'com.miui.videoplayer.VideoPlayerActivity',
                        'com.ktcp.video.activity.TVPlayerActivity',
@@ -142,7 +142,7 @@ def is_player_activity():
         return None
 
 def playing_video_wait_quit(driver,timeout):
-    activity = is_player_activity()
+    activity = is_player_activity(driver)
     if activity != None:
         while True:
             if(timeout <= 0):
