@@ -61,6 +61,10 @@ def on_milist_activity(activity):
 
 
 def on_detail_activity(activity):
+    if layout_content_find_text(driver, '系统维护中'):
+        printf('播放视频失败,退出')
+        driver.press_keycode(4)
+        return False
     if select_by_text(driver, '播放') or select_by_text(
             driver, '继续') or select_by_text(driver, '试看') or select_by_text(
                 driver, '预告片'):
