@@ -75,7 +75,12 @@ def on_detail_activity(activity):
         if pos != None:
             tap_by_position(driver, pos)
             time.sleep(1)
-            return True
+
+            if driver.current_activity == activity:  #防止进入a选集界面
+                driver.press_keycode(66)
+                return False
+            else:
+                return True
         elif select_by_text(driver, '选集'):
             time.sleep(1)
             if driver.current_activity == activity:
