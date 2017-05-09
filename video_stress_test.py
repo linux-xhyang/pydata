@@ -1,37 +1,36 @@
 from appium import webdriver
-from selenium.common.exceptions import NoSuchElementException
 from distutils.log import warn as printf
-
+import time
 from myuilib import *
 
 des = {}
 des['platformName'] = 'Android'
 des['platformVersion'] = '6.0'
-des['deviceName'] = '10.235.178.230:5555'
-#des['deviceName'] = '192.168.1.33:5555'
+des['deviceName'] = '10.235.178.234:5555'
+# des['deviceName'] = '192.168.1.33:5555'
 des['newCommandTimeout'] = 0
-des['appPackage'] = "com.mitv.tvhome"  #"com.xiaomi.mitv.settings"
-#des['appActivity'] = "com.xiaomi.mitv.settings.entry.MainActivity"
+des['appPackage'] = "com.mitv.tvhome"  # "com.xiaomi.mitv.settings"
+# des['appActivity'] = "com.xiaomi.mitv.settings.entry.MainActivity"
 des['appActivity'] = "com.mitv.tvhome.MainActivity"
 des['noReset'] = True
-#des['udid'] = '192.168.1.33:5555'
-des['udid'] = '10.235.178.230:5555'
+# des['udid'] = '192.168.1.33:5555'
+des['udid'] = '10.235.178.234:5555'
 des['stopAppOnReset'] = False
 des['dontStopAppOnReset'] = True
 des['disableAndroidWatcher'] = False
-#des['app'] = "/home/duokan/xhyang/system/vendor/app/TvHome/TvHome.apk"
-#des['app'] = "/home/duokan/xhyang/system/app/MiTVSettings2/MiTVSettings2.apk"
+# des['app'] = "/home/duokan/xhyang/system/vendor/app/TvHome/TvHome.apk"
+# des['app'] = "/home/duokan/xhyang/system/app/MiTVSettings2/MiTVSettings2.apk"
 driver = webdriver.Remote('http://localhost:4723/wd/hub', des)
 
 
 def on_main_activity(activity):
     els = layout_content_find_text(driver, '电影')
-    if els != None:
+    if els is not None:
         els.click()
         pos = find_object_by_image(driver, "image/ambition_dianying.png")
-        if pos != None:
+        if pos is not None:
             els = el_find_by_image_pos(driver, pos, False)
-            if els != None:
+            if els is not None:
                 if not els.is_selected():
                     els.click()
                     els.click()
@@ -42,6 +41,7 @@ def on_channel_activity(activity):
     driver.press_keycode(22)
     time.sleep(1)
     driver.press_keycode(66)
+    time.sleep(1)
 
 
 def on_milist_activity(activity):
@@ -49,7 +49,7 @@ def on_milist_activity(activity):
     driver.press_keycode(22)
     time.sleep(1)
     post = el_find_by_select(driver)
-    if pre == post:  #last
+    if pre == post:  # last
         driver.press_keycode(20)
         time.sleep(1)
         pre = el_find_by_select(driver)
@@ -64,6 +64,7 @@ def on_detail_activity(activity):
     if layout_content_find_text(driver, '系统维护中'):
         printf('播放视频失败,退出')
         driver.press_keycode(4)
+        time.sleep(1)
         return False
     if select_by_text(driver, '播放') or select_by_text(
             driver, '继续') or select_by_text(driver, '试看') or select_by_text(
@@ -72,12 +73,13 @@ def on_detail_activity(activity):
         return True
     else:
         pos = find_object_by_image(driver, "image/Play.png")
-        if pos != None:
+        if pos is not None:
             tap_by_position(driver, pos)
             time.sleep(1)
 
-            if driver.current_activity == activity:  #防止进入a选集界面
+            if driver.current_activity == activity:  # 防止进入a选集界面
                 driver.press_keycode(66)
+                time.sleep(1)
                 return False
             else:
                 return True
@@ -85,10 +87,15 @@ def on_detail_activity(activity):
             time.sleep(1)
             if driver.current_activity == activity:
                 driver.press_keycode(66)
+                time.sleep(1)
                 return False
             else:
+
                 return True
-        return False
+        else:
+            driver.press_keycode(4)
+            time.sleep(1)
+            return False
 
 
 def is_detail_activity():
@@ -124,8 +131,14 @@ method_key = {
 def run_method():
     if driver.current_activity in method_key:
         method_key[driver.current_activity](driver.current_activity)
+        time.sleep(1)
     else:
-        printf("Unknown Activity:%s" % driver.current_activity)
+        if driver.current_activity == None:
+            driver.press_keycode(66)
+            driver.press_keycode(4)
+            printf("Maybe Anr Found")
+        else:
+            printf("Unknown Activity:%s" % driver.current_activity)
         time.sleep(1)
 
 
