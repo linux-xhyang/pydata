@@ -3,10 +3,11 @@ from distutils.log import warn as printf
 import time
 from myuilib import *
 
+device_id = '10.235.178.245:5555'
 des = {}
 des['platformName'] = 'Android'
 des['platformVersion'] = '6.0'
-des['deviceName'] = '10.235.178.234:5555'
+des['deviceName'] = device_id
 # des['deviceName'] = '192.168.1.33:5555'
 des['newCommandTimeout'] = 0
 des['appPackage'] = "com.mitv.tvhome"  # "com.xiaomi.mitv.settings"
@@ -14,7 +15,7 @@ des['appPackage'] = "com.mitv.tvhome"  # "com.xiaomi.mitv.settings"
 des['appActivity'] = "com.mitv.tvhome.MainActivity"
 des['noReset'] = True
 # des['udid'] = '192.168.1.33:5555'
-des['udid'] = '10.235.178.234:5555'
+des['udid'] = device_id
 des['stopAppOnReset'] = False
 des['dontStopAppOnReset'] = True
 des['disableAndroidWatcher'] = False
@@ -46,17 +47,20 @@ def on_channel_activity(activity):
 
 def on_milist_activity(activity):
     pre = el_find_by_select(driver)
-    driver.press_keycode(22)
-    time.sleep(1)
-    post = el_find_by_select(driver)
-    if pre == post:  # last
-        driver.press_keycode(20)
-        time.sleep(1)
-        pre = el_find_by_select(driver)
-        if pre == post:
-            driver.press_keycode(4)
-    else:
+    if pre == None:
         driver.press_keycode(66)
+    else:
+        driver.press_keycode(22)
+        time.sleep(1)
+        post = el_find_by_select(driver)
+        if pre == post:  # last
+            driver.press_keycode(20)
+            time.sleep(1)
+            pre = el_find_by_select(driver)
+            if pre == post:
+                driver.press_keycode(4)
+        else:
+            driver.press_keycode(66)
     time.sleep(1)
 
 
@@ -130,6 +134,7 @@ method_key = {
 
 def run_method():
     if driver.current_activity in method_key:
+        printf("Current Activity:%s" % driver.current_activity)
         method_key[driver.current_activity](driver.current_activity)
         time.sleep(1)
     else:

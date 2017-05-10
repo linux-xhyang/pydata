@@ -62,6 +62,8 @@ def el_find_by_select(driver):
         ]
         if len(select) == 1:
             return select[0]
+        elif len(select) == 0:
+            driver.press_keycode(20)
         else:
             printf("Multi Select Found")
     else:
@@ -98,10 +100,7 @@ def select_by_text(driver, text):
         if (els):
             els.click()
             time.sleep(1)
-            if (els.is_selected()):
-                return True
-            else:
-                return False
+            return True
         else:
             return False
     except NoSuchElementException:
