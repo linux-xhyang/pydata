@@ -24,7 +24,7 @@ def find_object_by_image(driver, image):
             template, width=int(template.shape[1] * scale))
 
         res = cv2.matchTemplate(img_gray, resized, cv2.TM_CCOEFF_NORMED)
-        threshold = 0.8
+        threshold = 0.9
         loc = np.where(res >= threshold)
 
         if (len(loc[0]) and len(loc[1])):
@@ -35,10 +35,16 @@ def el_find_by_image_pos(driver, pos, selected):
     el = driver.find_elements_by_class_name('android.widget.ImageView')
     if el is not None:
         if (selected):
-            select = [x for x in el if x.is_selected()]
+            select = [
+                x for x in el
+                if x.is_selected() and x.location['x'] > 0 and
+                x.location['y'] > 0
+            ]
         else:
             select = [
-                x for x in el if x.size['width'] > 0 and x.size['height'] > 0
+                x for x in el
+                if x.size['width'] > 0 and x.size['height'] > 0 and
+                x.location['x'] > 0 and x.location['y'] > 0
             ]
         for els in select:
             start_x = els.location['x']
@@ -47,6 +53,70 @@ def el_find_by_image_pos(driver, pos, selected):
             end_y = start_y + els.size['height']
             x = pos[0][0]
             y = pos[0][1]
+            printf("start (%d,%d),end (%d,%d)" % (start_x, start_y, end_x,
+                                                  end_y))
+            if x > start_x and x < end_x and y > start_y and y < end_y:
+                return els
+    else:
+        return None
+
+
+def el_find_clickable_by_pos(driver, pos, selected):
+    el = driver.find_elements_by_android_uiautomator(
+        'new UiSelector().clickable(true)')
+    if el is not None:
+        if (selected):
+            select = [
+                x for x in el
+                if x.is_selected() and x.location['x'] > 0 and
+                x.location['y'] > 0
+            ]
+        else:
+            select = [
+                x for x in el
+                if x.size['width'] > 0 and x.size['height'] > 0 and
+                x.location['x'] > 0 and x.location['y'] > 0
+            ]
+        for els in select:
+            start_x = els.location['x']
+            start_y = els.location['y']
+            end_x = start_x + els.size['width']
+            end_y = start_y + els.size['height']
+            x = pos[0][0]
+            y = pos[0][1]
+            printf("start (%d,%d),end (%d,%d)" % (start_x, start_y, end_x,
+                                                  end_y))
+            if x > start_x and x < end_x and y > start_y and y < end_y:
+                return els
+    else:
+        return None
+
+
+def el_find_focusable_by_pos(driver, pos, selected):
+    el = driver.find_elements_by_android_uiautomator(
+        'new UiSelector().focusable(true)')
+    if el is not None:
+        if (selected):
+            select = [
+                x for x in el
+                if x.is_selected() and x.location['x'] > 0 and
+                x.location['y'] > 0
+            ]
+        else:
+            select = [
+                x for x in el
+                if x.size['width'] > 0 and x.size['height'] > 0 and
+                x.location['x'] > 0 and x.location['y'] > 0
+            ]
+        for els in select:
+            start_x = els.location['x']
+            start_y = els.location['y']
+            end_x = start_x + els.size['width']
+            end_y = start_y + els.size['height']
+            x = pos[0][0]
+            y = pos[0][1]
+            printf("start (%d,%d),end (%d,%d)" % (start_x, start_y, end_x,
+                                                  end_y))
             if x > start_x and x < end_x and y > start_y and y < end_y:
                 return els
     else:
@@ -54,20 +124,24 @@ def el_find_by_image_pos(driver, pos, selected):
 
 
 def el_find_by_select(driver):
-    el = driver.find_elements_by_class_name('android.widget.ImageView')
-    if el is not None:
-        select = [
-            x for x in el
-            if x.is_selected() and x.size['width'] > 0 and x.size['height'] > 0
-        ]
-        if len(select) == 1:
-            return select[0]
-        elif len(select) == 0:
-            driver.press_keycode(20)
+    try:
+        el = driver.find_elements_by_class_name('android.widget.ImageView')
+        if el is not None:
+            select = [
+                x for x in el
+                if x.is_selected() and x.size['width'] > 0 and
+                x.size['height'] > 0
+            ]
+            if len(select) == 1:
+                return select[0]
+            elif len(select) == 0:
+                driver.press_keycode(20)
+            else:
+                printf("Multi Select Found")
         else:
-            printf("Multi Select Found")
-    else:
-        return None
+            return None
+    except NoSuchElementException:
+        return False
 
 
 def swipe_by_direction(driver, dir):
@@ -100,6 +174,17 @@ def select_by_text(driver, text):
         if (els):
             els.click()
             time.sleep(1)
+            return True
+        else:
+            return False
+    except NoSuchElementException:
+        return False
+
+
+def find_select_count(driver):
+    try:
+        pos = find_object_by_image(driver, "image/number.png")
+        if pos is not None:
             return True
         else:
             return False

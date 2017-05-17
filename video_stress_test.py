@@ -47,7 +47,10 @@ def on_channel_activity(activity):
 
 def on_milist_activity(activity):
     pre = el_find_by_select(driver)
-    if pre == None:
+    if pre == None:  # 收藏
+        printf("Not select found")
+        driver.press_keycode(20)
+        time.sleep(1)
         driver.press_keycode(66)
     else:
         driver.press_keycode(22)
@@ -74,7 +77,6 @@ def on_detail_activity(activity):
             driver, '继续') or select_by_text(driver, '试看') or select_by_text(
                 driver, '预告片'):
         time.sleep(1)
-        return True
     else:
         pos = find_object_by_image(driver, "image/Play.png")
         if pos is not None:
@@ -88,13 +90,19 @@ def on_detail_activity(activity):
             else:
                 return True
         elif select_by_text(driver, '选集'):
-            time.sleep(1)
+            printf("选集:")
+            time.sleep(3)
             if driver.current_activity == activity:
-                driver.press_keycode(66)
+                if find_select_count(driver):
+                    printf("Now Play:")
+                    driver.press_keycode(66)
+                    driver.press_keycode(66)
+                else:
+                    printf("No Select Found,return")
+                    driver.press_keycode(4)
                 time.sleep(1)
                 return False
             else:
-
                 return True
         else:
             driver.press_keycode(4)
