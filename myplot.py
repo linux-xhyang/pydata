@@ -9,15 +9,17 @@ r2 = p.line([], [], color="navy", line_width=2)
 
 ds1 = r1.data_source
 ds2 = r2.data_source
-print("hello")
+
+
 @linear()
 def update(step):
     ds1.data['x'].append(step)
-    ds1.data['y'].append(random.randint(0,100))
+    ds1.data['y'].append(random.randint(0, 100))
     ds2.data['x'].append(step)
-    ds2.data['y'].append(random.randint(0,100))
+    ds2.data['y'].append(random.randint(0, 100))
     ds1.trigger('data', ds1.data, ds1.data)
     ds2.trigger('data', ds2.data, ds2.data)
+
 
 curdoc().add_root(p)
 

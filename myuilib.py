@@ -53,8 +53,8 @@ def el_find_by_image_pos(driver, pos, selected):
             end_y = start_y + els.size['height']
             x = pos[0][0]
             y = pos[0][1]
-            printf("start (%d,%d),end (%d,%d)" % (start_x, start_y, end_x,
-                                                  end_y))
+            # printf("start (%d,%d),end (%d,%d)" % (start_x, start_y, end_x,
+            #                                      end_y))
             if x > start_x and x < end_x and y > start_y and y < end_y:
                 return els
     else:
@@ -84,8 +84,8 @@ def el_find_clickable_by_pos(driver, pos, selected):
             end_y = start_y + els.size['height']
             x = pos[0][0]
             y = pos[0][1]
-            printf("start (%d,%d),end (%d,%d)" % (start_x, start_y, end_x,
-                                                  end_y))
+            # printf("start (%d,%d),end (%d,%d)" % (start_x, start_y, end_x,
+            #                                      end_y))
             if x > start_x and x < end_x and y > start_y and y < end_y:
                 return els
     else:
@@ -115,8 +115,8 @@ def el_find_focusable_by_pos(driver, pos, selected):
             end_y = start_y + els.size['height']
             x = pos[0][0]
             y = pos[0][1]
-            printf("start (%d,%d),end (%d,%d)" % (start_x, start_y, end_x,
-                                                  end_y))
+            # printf("start (%d,%d),end (%d,%d)" % (start_x, start_y, end_x,
+            #                                      end_y))
             if x > start_x and x < end_x and y > start_y and y < end_y:
                 return els
     else:

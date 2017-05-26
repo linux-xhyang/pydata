@@ -46,6 +46,11 @@ def on_channel_activity(activity):
 
 
 def on_milist_activity(activity):
+    if layout_content_find_text(driver, '系统维护中'):
+        printf('播放视频失败,退出')
+        driver.press_keycode(4)
+        time.sleep(1)
+        return False
     pre = el_find_by_select(driver)
     if pre == None:  # 收藏
         printf("Not select found")
@@ -119,11 +124,31 @@ def is_detail_activity():
         return False
 
 
+def turn_screen(driver):
+    driver.press_keycode(26)
+    time.sleep(2)
+    driver.long_press_keycode(22)
+    el = layout_content_find_text(driver, '关屏')
+    if el is not None:
+        el.click()
+        time.sleep(10)
+        driver.long_press_keycode(4)
+    else:
+        driver.long_press_keycode(22)
+
+
+global play_count
+
+
 def on_player_activity(activity):
+    global play_count
+    play_count += 1
+    turn_screen(driver)
     playing_video_wait_quit(driver, 100)
     while is_detail_activity():
         driver.press_keycode(4)
         time.sleep(1)
+    printf("%s:%d" % (time.ctime(), play_count))
 
 
 method_key = {
@@ -156,6 +181,9 @@ def run_method():
 
 
 def video_stress_test():
+    global play_count
+    play_count = 0
+
     # while True:
     #      if(home_select(driver) == False):
     #           printf("Home not found")
