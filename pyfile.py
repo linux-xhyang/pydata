@@ -72,12 +72,17 @@ def rule_parser(dir, file):
                 deps = re.split(r" = ", line.strip('\n'))
             elif re.match(r" command = ", line):
                 command = re.split(r" = ", line.strip('\n'))
-                command = re.split("\"\(| \) ", command[1])
+                command = re.split(r" \"|\"\(| \) | \)\"|&& \(", command[1])
 
             if desc and deps and command:
-                if deps[1] == "gcc" and len(desc) > 3 and len(command) > 1:
-                    rules[desc[3]] = rule(desc[1], desc[2], desc[3], deps[1],
-                                          command[1].replace("\$", ""))
+                if deps[1] == "gcc" and len(desc) > 3:
+                    for cmd in command:
+                        cmd = cmd.replace("\$", "")
+                        cmd = cmd.strip('"')
+                        if cmd.endswith(desc[3]) == True:
+                            rules[desc[3]] = rule(desc[1], desc[2], desc[3],
+                                                  deps[1], cmd)
+
                     begin = False
                     desc = None
                     deps = None
