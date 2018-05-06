@@ -2,8 +2,10 @@
 
 import sys, getopt,re
 import pandas as pd
+import json
+import os
 
-rules = []
+rules = {}
 class rule:
     target = ''
     module = ''
@@ -19,6 +21,8 @@ class rule:
 
     def tostring(self):
         return "module :" + self.module + '\n' + "deps :" + self.deps + '\n' + "file :" + self.file + '\n' +"command :" + self.command + '\n'
+    def tojson(self):
+        return json.dumps({"directory":os.getenv("PWD"),"command":self.command,"file":self.file},indent=True)
 
 def file_process(src, dst):
     rfile = open(src, "r")
@@ -47,15 +51,16 @@ def rule_parser(src,dst):
     while line:
         if begin == True:
             if re.match(r" description = ",line):
-                desc = re.split(r"=|:|<=",line.strip('\n'))
+                desc = re.split(r"=|:|<= ",line.strip('\n'))
             elif re.match(r" deps = ",line):
                 deps = re.split(r" = ",line.strip('\n'))
             elif re.match(r" command = ",line):
                 command = re.split(r" = ",line.strip('\n'))
+                command = re.split("\"\(| \) ",command[1])
 
             if desc and deps and command:
-                if deps[1] == "gcc" and len(desc) > 3:
-                    rules.append(rule(desc[1],desc[2],desc[3],deps[1],command[1]))
+                if deps[1] == "gcc" and len(desc) > 3 and len(command) > 1:
+                    rules[desc[3]] = rule(desc[1],desc[2],desc[3],deps[1],command[1].replace("\$",""))
                     begin = False
                     desc = None
                     deps = None
@@ -67,8 +72,11 @@ def rule_parser(src,dst):
             command = None
             begin = True
         line = rfile.readline()
-    for item in rules:
-        wfile.write(item.tostring())
+    wfile.write("[\n")
+    for key,value in rules.items():
+        wfile.write(value.tojson())
+        wfile.write(",\n")
+    wfile.write("]")
     wfile.close()
 
 def main(argv):
