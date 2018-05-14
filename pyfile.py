@@ -78,7 +78,9 @@ def rule_parser(dir, file):
                 if deps[1] == "gcc" and len(desc) > 3:
                     for cmd in command:
                         cmd = cmd.replace("\$", "")
+                        cmd = cmd.replace("\t", "")
                         cmd = cmd.strip('"')
+                        cmd = cmd.replace("\\", "")
                         if cmd.endswith(desc[3]) == True:
                             rules[desc[3]] = rule(desc[1], desc[2], desc[3],
                                                   deps[1], cmd)
