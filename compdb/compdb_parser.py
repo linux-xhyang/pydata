@@ -36,7 +36,8 @@ def compdb_parser(dir, file):
                         build_cmd = re.split(r"PWD=\/proc\/self\/cwd ",
                                              build_cmd)
                     else:
-                        build_cmd = re.split(r"\/bin\/bash -c \"\(", build_cmd)
+                        build_cmd = re.split(r"\/bin\/bash -c \"\(| \) &&",
+                                             build_cmd)
 
                     if (len(build_cmd) > 1):
                         build_cmd = build_cmd[1]
