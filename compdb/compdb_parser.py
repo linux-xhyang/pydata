@@ -32,7 +32,12 @@ def compdb_parser(dir, file):
                 if r1.search(item['file']):
                     file_count += 1
                     build_cmd = item['command']
-                    build_cmd = re.split(r"PWD=\/proc\/self\/cwd ", build_cmd)
+                    if build_cmd.__contains__('PWD=/proc/self/cwd '):
+                        build_cmd = re.split(r"PWD=\/proc\/self\/cwd ",
+                                             build_cmd)
+                    else:
+                        build_cmd = re.split(r"\/bin\/bash -c \"\(", build_cmd)
+
                     if (len(build_cmd) > 1):
                         build_cmd = build_cmd[1]
                         build_cmd = build_cmd.replace("\t", "")
