@@ -32,18 +32,22 @@ def compdb_parser(dir, file):
                 if r1.search(item['file']):
                     file_count += 1
                     build_cmd = item['command']
-                    if build_cmd.__contains__('PWD=/proc/self/cwd '):
-                        build_cmd = re.split(r"PWD=\/proc\/self\/cwd ",
+                    if build_cmd.__contains__('PWD=/proc/self/cwd  '):
+                        build_cmd = re.split(r"PWD=\/proc\/self\/cwd  ",
                                              build_cmd)
                     else:
                         build_cmd = re.split(r"\/bin\/bash -c \"\(| \) &&",
                                              build_cmd)
 
-                    if (len(build_cmd) > 1):
+                    if (len(build_cmd) >
+                            1) and build_cmd[1].startswith('prebuilts'):
                         build_cmd = build_cmd[1]
                         build_cmd = build_cmd.replace("\t", "")
+                        build_cmd = build_cmd.replace("((packed))", "")
+                        build_cmd = build_cmd.replace("\$(cat", "$(cat")
                         build_cmd = build_cmd.strip('"')
-                        build_cmd = build_cmd.replace("\\", "")
+                        quote = re.compile('\\\\+\"')
+                        build_cmd = re.sub(quote, r'\\"', build_cmd)
 
                         item['command'] = build_cmd
                         if first == False:
