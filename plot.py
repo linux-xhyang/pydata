@@ -57,9 +57,10 @@ def parse_framestats(line, valid_only=False):
             draw = (framestats[headers.index('SyncStart')] -
                     framestats[headers.index('DrawStart')]) / 1000000
 
-            # ISSUE_DRAW_COMMANDS_START - SYNC_START
-            sync = (framestats[headers.index('IssueDrawCommandsStart')] -
-                    framestats[headers.index('SyncStart')]) / 1000000
+            # SYNC_START - ISSUE_DRAW_COMMANDS_START
+            sync = (
+                framestats[headers.index('SyncStart')] -
+                framestats[headers.index('IssueDrawCommandsStart')]) / 1000000
 
             # FRAME_COMPLETED - ISSUE_DRAW_COMMANDS_START
             gpu = (
@@ -75,25 +76,27 @@ def parse_framestats(line, valid_only=False):
 for j in range(1, 2):
     global headers
     headers = []
-    time.sleep(1)
-    print("开始执行第" + str(j) + "遍")
-    # 重置所有计数器并汇总收集的统计信息
-    os.popen("adb shell dumpsys gfxinfo com.google.android.tvlauncher reset")
-    print("清理帧信息回到初始状态")
+    # time.sleep(1)
+    # print("开始执行第" + str(j) + "遍")
+    # # 重置所有计数器并汇总收集的统计信息
+    # os.popen("adb shell dumpsys gfxinfo com.google.android.tvlauncher reset")
+    # print("清理帧信息回到初始状态")
 
-    # 模拟滑动页面操作
-    for i in range(1, 3):
-        print("执行滑动页面操作" + str(i) + "次")
-        os.system("adb shell input swipe 600 600 100 100 200")
-        time.sleep(1)
-        os.system("adb shell input swipe 100 100 600 600 200")
+    # # 模拟滑动页面操作
+    # for i in range(1, 3):
+    #     print("执行滑动页面操作" + str(i) + "次")
+    #     os.system("adb shell input swipe 600 600 100 100 200")
+    #     time.sleep(1)
+    #     os.system("adb shell input swipe 100 100 600 600 200")
 
-    # 过滤、筛选精确的帧时间信息
-    command = "adb shell dumpsys gfxinfo com.google.android.tvlauncher framestats | grep -A 120 'Flags'"
-    r = os.popen(command)
-    info = r.readlines()
+    # # 过滤、筛选精确的帧时间信息
+    # command = "adb shell dumpsys gfxinfo com.google.android.tvlauncher framestats | grep -A 120 'Flags'"
+    # r = os.popen(command)
+    # info = r.readlines()
 
     # 数据处理中
+    r = open("/home/xhyang/src/pydata/frame.txt", "r")
+    info = r.readlines()
     print("缓存数据中......")
     for line in info:  #按行遍历
         eachline = line.strip()
@@ -106,13 +109,19 @@ for j in range(1, 2):
             print(headers)
         else:
             result = parse_framestats(eachline)
-            details.append(result)
+            for i, val in enumerate(result):
+                try:
+                    details[i].append(val)
+                except:
+                    details.append([val])
+            #details.append(result)
             totals.append(sum(result))
 
 # frame series
 if len(totals) > 0 and len(details) > 0:
     time = range(len(totals))
     threshold = 16.67
+    title = "gfxinfo"
     fig, ax = plt.subplots()
     for i, (detail, column, color) in enumerate(
             zip(details, [
@@ -126,7 +135,8 @@ if len(totals) > 0 and len(details) > 0:
             color=color,
             linewidth=0,
             bottom=[0] * len(detail)
-            if i == 0 else list(map(sum, zip(*details[:i]))))
+            if i == 0 else list(map(sum, zip(*details[:i]))),
+            width=1.0)
     ax.plot([0, len(totals)], [threshold, threshold], color="limegreen")
     plt.title(title + " Frame Series")
     plt.xlabel("Frame Number")
