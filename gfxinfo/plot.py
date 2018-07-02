@@ -76,27 +76,27 @@ def parse_framestats(line, valid_only=False):
 for j in range(1, 2):
     global headers
     headers = []
-    # time.sleep(1)
-    # print("开始执行第" + str(j) + "遍")
-    # # 重置所有计数器并汇总收集的统计信息
-    # os.popen("adb shell dumpsys gfxinfo com.google.android.tvlauncher reset")
-    # print("清理帧信息回到初始状态")
+    time.sleep(1)
+    print("开始执行第" + str(j) + "遍")
+    # 重置所有计数器并汇总收集的统计信息
+    os.popen("adb shell dumpsys gfxinfo com.google.android.tvlauncher reset")
+    print("清理帧信息回到初始状态")
 
-    # # 模拟滑动页面操作
-    # for i in range(1, 3):
-    #     print("执行滑动页面操作" + str(i) + "次")
-    #     os.system("adb shell input swipe 600 600 100 100 200")
-    #     time.sleep(1)
-    #     os.system("adb shell input swipe 100 100 600 600 200")
+    # 模拟滑动页面操作
+    for i in range(1, 3):
+        print("执行滑动页面操作" + str(i) + "次")
+        os.system("adb shell input swipe 600 600 100 100 200")
+        time.sleep(1)
+        os.system("adb shell input swipe 100 100 600 600 200")
 
-    # # 过滤、筛选精确的帧时间信息
-    # command = "adb shell dumpsys gfxinfo com.google.android.tvlauncher framestats | grep -A 120 'Flags'"
-    # r = os.popen(command)
-    # info = r.readlines()
+    # 过滤、筛选精确的帧时间信息
+    command = "adb shell dumpsys gfxinfo com.google.android.tvlauncher framestats | grep -A 120 'Flags'"
+    r = os.popen(command)
+    info = r.readlines()
 
     # 数据处理中
-    r = open("/home/xhyang/src/pydata/frame.txt", "r")
-    info = r.readlines()
+    # r = open("/home/xhyang/src/pydata/frame.txt", "r")
+    # info = r.readlines()
     print("缓存数据中......")
     for line in info:  #按行遍历
         eachline = line.strip()
@@ -105,8 +105,7 @@ for j in range(1, 2):
             headers = eachline.split(',')
             if headers[-1] == '':
                 headers.pop()
-
-            print(headers)
+            #print(headers)
         else:
             result = parse_framestats(eachline)
             for i, val in enumerate(result):
