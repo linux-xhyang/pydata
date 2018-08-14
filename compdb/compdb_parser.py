@@ -16,7 +16,7 @@ def compdb_parser(dir, file):
     ]
 
     proc = subprocess.Popen(
-        command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     output = proc.stdout.read()
     json_data = json.loads(output, strict=False)
