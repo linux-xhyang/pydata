@@ -1,5 +1,6 @@
 ipython
 isort
+epc
 numpy
 pandas
 bokeh
