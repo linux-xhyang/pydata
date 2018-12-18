@@ -1,4 +1,5 @@
 ipython
+isort
 numpy
 pandas
 bokeh
@@ -13,8 +14,10 @@ autoflake
 yapf
 hy
 rope
-jedi<0.9.0
-json-rpc>=1.8.1
-service_factory>=0.1.5
+jedi
+json-rpc #if use python-jsonrpc-server,need remove this
+#python-jsonrpc-server #python-language-server need
+service_factory
 imutils
 ansible
+python-language-server[all]
