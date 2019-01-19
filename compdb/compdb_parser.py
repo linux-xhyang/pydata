@@ -1,8 +1,8 @@
-import sys, re
 import json
 import os
-import subprocess
 import re
+import subprocess
+import sys
 
 
 def compdb_parser(dir, file):
@@ -20,9 +20,8 @@ def compdb_parser(dir, file):
 
     output = proc.stdout.read()
     json_data = json.loads(output, strict=False)
-
     with open(wf, 'w') as f:
-        r1 = re.compile(r"\.cpp$|\.c$|\.cxx$")
+        r1 = re.compile(r"\.cpp$|\.c$|\.cxx$|\.cc$")
         f.write("[\n")
         file_count = 0
 
