@@ -35,22 +35,21 @@ def construct_second_list():
     for section, name, pg in zip(typelist, namelist, counts):
         typeid = section.split("?")[1]
         summary = []
-        for index in range(1, pg + 1):
+        for index in range(1, pg + 1):  #page
             url = "http://eshukan.com/NoLayoutFee.aspx?pg=" + str(
                 index) + "&" + typeid
             response = http.request('GET', url)
             soup = BeautifulSoup(response.data)
-            for anchor in soup.findAll('li', {'class': 'bu'}):
+            for anchor in soup.findAll('li', {'class': 'bu'}):  #school
                 for title in anchor.findAll('a', href=True, text=True):
+                    school = [title['title']]
                     data = get_data('http://eshukan.com/' + title['href'])
-                    print(data)
-                    summary.append(title['title'] + "\n:" + data)
+                    school += data
+                    summary.append(school)
 
         pdsum = pandas.DataFrame(summary)
-        print(name)
         pdsum.to_excel(
             excel_writer=writer, sheet_name=str.replace(name, "/", ""))
-
         writer.save()
         writer.close()
 

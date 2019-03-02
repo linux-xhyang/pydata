@@ -1,17 +1,17 @@
-import random
-import pandas
 import os
+import random
 
 import numpy as np
-
+import pandas
 from bokeh.layouts import gridplot
-from bokeh.plotting import figure, show, output_file
+from bokeh.plotting import figure, output_file, show
 
 big = pandas.read_csv(
     "big.txt", sep=",", dtype={
         'step': np.int32,
         'sharpness': np.float
     })
+
 middle = pandas.read_csv(
     "middle.txt", sep=",", dtype={
         'step': np.int32,
