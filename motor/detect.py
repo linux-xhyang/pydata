@@ -27,6 +27,16 @@ class Detect:
 
         self.res_img = img_morph
 
+    def morph_detect(self):
+        self.blur_img = cv2.GaussianBlur(self.gray, ksize=(9, 9), sigmaX=4)
+        self.res_img = cv2.Canny(self.blur_img, 90, 180, apertureSize=5)
+
+        #img_morph = cv2.morphologyEx(self.res_img, cv2.MORPH_CLOSE, (3, 3))
+        img_morph = self.res_img
+        cv2.dilate(img_morph, (9, 9), img_morph, iterations=12)
+
+        self.res_img = img_morph
+
     def thresh_proc(self):
         _, thresh = cv2.threshold(self.res_img, 0, 255,
                                   cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -53,7 +63,7 @@ class Detect:
                 objs.append(count)
             count += 1
 
-        print(objs)
+        #print(objs)
 
         cnts_second = []
         for index in objs:
@@ -71,10 +81,10 @@ class Detect:
         return mask
 
     def process_main(self):
-        self.canny_detect()
+        self.morph_detect()
 
         points = self.key_points_tap(self.res_img)
-
+        print(points)
         cnt_img = self.key_cnt_draw(points)
 
         cv2.imshow('cnts', cnt_img)
