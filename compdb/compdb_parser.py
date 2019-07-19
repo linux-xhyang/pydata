@@ -30,6 +30,7 @@ def compdb_parser(dir, file):
             if item.__contains__('file'):
                 if r1.search(item['file']):
                     file_count += 1
+                    directory = item['directory']
                     build_cmd = item['command']
                     if build_cmd.__contains__('PWD=/proc/self/cwd '):
                         build_cmd = re.split(r"PWD=\/proc\/self\/cwd ",
@@ -48,7 +49,8 @@ def compdb_parser(dir, file):
                         quote = re.compile('\\\\+\"')
                         build_cmd = re.sub(quote, r'\\"', build_cmd)
 
-                        item['command'] = build_cmd
+                        item['command'] = directory + "/" + build_cmd
+                        item['file'] = directory + "/" + item['file']
                         if first == False:
                             f.write(",\n")
                         else:
