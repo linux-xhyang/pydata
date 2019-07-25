@@ -61,74 +61,92 @@ class Detect:
         self.result = img_morph
 
     def thresh_detect(self):
-        thresh = cv2.adaptiveThreshold(self.gray, 255,
-                                       cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                       cv2.THRESH_BINARY, 31, 2)
-        cv2.bitwise_not(thresh, thresh)
-        cv2.dilate(thresh, (7, 5), thresh, iterations=7)
-        self.result = thresh
+        self.result = cv2.GaussianBlur(self.gray, ksize=(7, 7), sigmaX=2.4)
+        canny = cv2.Canny(self.result, 100, 200, apertureSize=5)
+
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+
+        cv2.dilate(canny, kernel, canny, iterations=1)
+        self.result = canny
+
+        # thresh = cv2.adaptiveThreshold(self.gray, 255,
+        #                                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        #                                cv2.THRESH_BINARY, 31, 2)
+        # cv2.bitwise_not(thresh, thresh)
+        # cv2.dilate(thresh, (7, 5), thresh, iterations=7)
+        # self.result = thresh
 
     def key_points_find(self, img):
         img_cp = img.copy()
         width, height = img.shape[1], img.shape[0]
+
         # 按外部模式找所有轮廓
+        boxs = []
+
         cnts, hie = cv2.findContours(img_cp, cv2.RETR_EXTERNAL,
                                      cv2.CHAIN_APPROX_SIMPLE)
-        boxs = []
-        for cnt in cnts:
-            x, y, w, h = cv2.boundingRect(cnt)
-            if abs(1 - w / h) < 0.3 and w > 40:
-                if x > 10:
-                    x -= 10
-                if y > 10:
-                    y -= 10
 
-                if x + w + 20 <= width:
-                    w += 20
-                else:
-                    w = (width - x)
+        # for cnt in cnts:
+        #     x, y, w, h = cv2.boundingRect(cnt)
+        #     if abs(1 - w / h) < 0.3 and w > 40:
+        #         if x > 10:
+        #             x -= 10
+        #         if y > 10:
+        #             y -= 10
 
-                if y + h + 20 <= height:
-                    h += 20
-                else:
-                    h = (height - y)
+        #         if x + w + 20 <= width:
+        #             w += 20
+        #         else:
+        #             w = (width - x)
 
-                boxs.append([x, y, w, h])
+        #         if y + h + 20 <= height:
+        #             h += 20
+        #         else:
+        #             h = (height - y)
+
+        #         boxs.append([x, y, w, h])
 
         if len(boxs) == 0:
             # 按结构树模式找所有轮廓
             print("External found zero,try with Tree")
+            parent = -1
+            self.counts = []
+            ic = 0
             cnts, hie = cv2.findContours(img_cp, cv2.RETR_TREE,
-                                         cv2.CHAIN_APPROX_SIMPLE)
-            cnt_big = sorted(cnts, key=cv2.contourArea, reverse=True)[1]
-            index = 0
-            for elm in cnts:
-                if np.array_equal(elm, cnt_big):
-                    break
-                index += 1
+                                         cv2.CHAIN_APPROX_NONE)
 
-            count = 0
-            for elm in hie[0]:
-                if elm[3] == index:
-                    x, y, w, h = cv2.boundingRect(cnts[count])
-                    if abs(1 - w / h) < 0.2 and w > 40:
-                        if x > 10:
-                            x -= 10
-                        if y > 10:
-                            y -= 10
+            print(len(cnts))
+            # for i in range(64, 67):
+            #     x, y, w, h = cv2.boundingRect(cnts[i])
+            #     cv2.rectangle(img_cp, (x, y), (x + w, y + h), (255, 255, 255),
+            #                   1)
+            # cv2.imshow("sort", img_cp)
+            for i in range(0, len(cnts)):
+                if hie[0][i][2] != -1 and ic == 0:
+                    parent = i
+                    ic = ic + 1
+                elif hie[0][i][2] != -1:
+                    ic = ic + 1
+                elif hie[0][i][2] == -1:
+                    if ic >= 12:
+                        print("found 1")
+                        self.counts.append([parent, ic])
+                    ic = 0
+                    parent = -1
 
-                        if x + w + 20 <= width:
-                            w += 20
-                        else:
-                            w = (width - x)
+            print(self.counts)
+            for i in range(self.counts[0][0],
+                           self.counts[0][0] + self.counts[0][1]):
+                x, y, w, h = cv2.boundingRect(cnts[i])
+                cv2.rectangle(img_cp, (x, y), (x + w, y + h), (255, 255, 255),
+                              1)
+            cv2.imshow("sort", img_cp)
 
-                        if y + h + 20 <= height:
-                            h += 20
-                        else:
-                            h = (height - y)
-
-                        boxs.append([x, y, w, h])
-                count += 1
+            for rect in self.counts:
+                if rect[0] > 12:
+                    boxs.append(cv2.boundingRect(cnts[rect[0] + rect[1] % 12]))
+                else:
+                    boxs.append(cv2.boundingRect(cnts[rect[0]]))
 
         return boxs
 
@@ -197,7 +215,7 @@ class Detect:
         self.vcp.release()
 
 
-d = Detect("/home/xhyang/my_photo-20.jpg")
+d = Detect("/home/xhyang/my_photo-23.jpg")
 #d = Detect("/home/xhyang/src/pydata/motor/autofocus.png")
 d.process_main()
 #d.vcp_main()
