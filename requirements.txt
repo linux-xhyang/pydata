@@ -7,18 +7,19 @@ bokeh
 jupyter
 matplotlib
 opencv-python
-simplejson
-flake8
-importmagic
-autopep8
-autoflake
-yapf
-hy
+pyls-mypy
+pyls-black
 rope
-jedi
-json-rpc #if use python-jsonrpc-server,need remove this
-#python-jsonrpc-server #python-language-server need
-service_factory
+pyflakes
+mccabe
+pycodestyle
+pydocstyle
+autopep8
+yapf
+simplejson
+importmagic
+yapf
 imutils
 ansible
-python-language-server[all]
+ptvsd>=4.2
+flake8
