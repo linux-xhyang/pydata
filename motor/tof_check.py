@@ -1,7 +1,12 @@
+import datetime
 import math
+import os
 import re
 
 import pandas as pd
+
+use_two_point = True
+max_step_offset = 12
 
 
 class tofnode:
@@ -15,12 +20,15 @@ class tofnode:
 
 
 class tofdata:
-    def __init__(self, sn, data):
+    def __init__(self, sn, date, data):
         self.sn = sn
+        self.date = date
         self.table = []
         self.theory_table = []
         self.diff_table = []
+
         nodes = re.findall('\((.*?)\)', data)
+
         if len(nodes) > 0:
             for v in nodes:
                 values = v.split(',')
@@ -29,7 +37,11 @@ class tofdata:
                         tofnode(
                             int(values[0].strip()), int(values[1].strip())))
         else:
+            nodes = []
             nodes = data.split(',')
+            if len(nodes) < 2:
+                nodes = data.split(';')
+
             for v in nodes:
                 values = v.split(':')
                 if len(values) == 2:
@@ -42,20 +54,31 @@ class tofdata:
 
     def theory_compute(self):
         best_step_2000 = 315.46
+        best_step_1200 = 366.724
         compute_2000_step = -1
+        compute_1200_step = -1
         for n in self.table:
             x = n.distance
             if abs(x - 2000) <= 100:
                 compute_2000_step = n.step
                 break
+            if abs(x - 1200) <= 100:
+                compute_1200_step = n.step
 
-        if compute_2000_step > 0:
-            offset = compute_2000_step - best_step_2000
+        if compute_2000_step > 0 and compute_1200_step > 0:
+            offset_2000 = compute_2000_step - best_step_2000
+            offset_1200 = compute_1200_step - best_step_1200
             for n in self.table:
                 x = n.distance
-                y = int(331.0 +
-                        (131.3 * math.pow(x, -0.9855) + 0.2498 - 0.341128) /
-                        0.0013 + offset + 43100 / x - 23.22)
+                if use_two_point == False or x >= 1400:
+                    y = int(331.0 + (131.3 * math.pow(x, -0.9855) + 0.2498 -
+                                     0.341128) / 0.0013 + offset_2000 +
+                            43100 / x - 23.22)
+                else:
+                    y = int(331.0 + (131.3 * math.pow(x, -0.9855) + 0.2498 -
+                                     0.341128) / 0.0013 + offset_1200 +
+                            43100 / x - 23.22)
+
                 self.theory_table.append(tofnode(x, y))
 
     def diff_compute(self):
@@ -96,14 +119,20 @@ class tofdata:
 class tof_check:
     def __init__(self):
         self.tof_datas = []
-        self.df = pd.read_excel(
-            '~/Documents/TOF/135/TOF工厂测试数据/M135JCN_DVT1.xlsx')
-        self.read_excel()
-        self.write_excel()
+        self.devices = {}
+        base_dir = "/home/xhyang/Documents/TOF/135/TOF工厂测试数据/"
+        files = os.listdir(base_dir)
 
+        for file in files:
+            path = base_dir + file
+            print("read file ", path)
+            self.df = pd.read_excel(path)
+            self.read_excel()
+
+        self.write_excel()
         count = 0
         for var in self.tof_datas:
-            if var.greater_than_bound(12):
+            if var.greater_than_bound(max_step_offset):
                 count += 1
 
         print("total : %d,failed : %f" % (len(self.tof_datas),
@@ -112,14 +141,19 @@ class tof_check:
     def read_excel(self):
         heads = self.df.columns.values
         for i in self.df.index.values:
-            row_data = self.df.ix[i, ['sn', 'item', 'content']]
-            if type(row_data['content']) == str and row_data['content'].strip(
-            ).startswith('TofTables'):
-                self.tof_datas.append(
-                    tofdata(row_data['sn'], row_data['content']))
-            elif row_data['item'] != None and row_data['item'] == '无感对焦数据读取':
-                self.tof_datas.append(
-                    tofdata(row_data['sn'], row_data['content']))
+            row_data = self.df.ix[i, ['sn', 'item', 'content', 'gmt_create']]
+            if row_data['item'] != None and (
+                    row_data['item'] == '无感对焦数据读取'
+                    or row_data['item'] == '无感对焦3600MM处读取数据'):
+                sn = row_data['sn'].strip()
+                if self.devices.__contains__(sn):
+                    continue
+                self.devices[sn] = 1
+                date = pd.Timestamp(row_data['gmt_create'])
+                date = date.strftime('%Y-%m-%dT%H:%M')
+
+                cnt = row_data['content'].strip()
+                self.tof_datas.append(tofdata(sn, date, cnt))
 
     def print_data(self):
         print("count = ", len(self.tof_datas))
@@ -133,8 +167,10 @@ class tof_check:
         ]
         dicts = {}
         dicts['sn'] = []
+        dicts['date'] = []
         dicts_raw = {}
         dicts_raw['sn'] = []
+        dicts_raw['date'] = []
         for h in headers:
             dicts[h] = []
             dicts_raw[h] = []
@@ -142,6 +178,8 @@ class tof_check:
         for i in self.tof_datas:
             dicts['sn'].append(i.sn)
             dicts_raw['sn'].append(i.sn)
+            dicts['date'].append(i.date)
+            dicts_raw['date'].append(i.date)
             for h in headers:
                 dicts[h].append(i.get_diff_by_distance(int(h)))
                 dicts_raw[h].append(i.get_raw_and_thoery_by_distance(int(h)))
@@ -160,4 +198,4 @@ class tof_check:
 
 
 check = tof_check()
-check.print_data()
+#check.print_data()
