@@ -20,12 +20,17 @@ class tofnode:
 
 
 class tofdata:
-    def __init__(self, sn, date, data):
-        self.sn = sn
-        self.date = date
+    def __init__(self):
+        self.sn = ""
+        self.date = None
         self.table = []
         self.theory_table = []
         self.diff_table = []
+        self.backstep = 0
+
+    def set_tof_data(self, sn, date, data):
+        self.sn = sn
+        self.date = date
 
         nodes = re.findall('\((.*?)\)', data)
 
@@ -51,6 +56,12 @@ class tofdata:
 
         self.theory_compute()
         self.diff_compute()
+
+    def set_back_step(self, step):
+        self.backstep = step
+
+    def get_back_step(self):
+        return self.backstep
 
     def theory_compute(self):
         best_step_2000 = 315.46
@@ -118,7 +129,7 @@ class tofdata:
 
 class tof_check:
     def __init__(self):
-        self.tof_datas = []
+        self.tof_datas = {}
         self.devices = {}
         base_dir = "/home/xhyang/Documents/TOF/135/TOF工厂测试数据/"
         files = os.listdir(base_dir)
@@ -131,12 +142,12 @@ class tof_check:
 
         self.write_excel()
         count = 0
-        for var in self.tof_datas:
+        for var in self.tof_datas.values():
             if var.greater_than_bound(max_step_offset):
                 count += 1
 
-        print("total : %d,failed : %f" % (len(self.tof_datas),
-                                          count / len(self.tof_datas)))
+        print("total : %d,failed : %f" % (len(
+            self.tof_datas.values()), count / len(self.tof_datas.values())))
 
     def read_excel(self):
         heads = self.df.columns.values
@@ -144,20 +155,38 @@ class tof_check:
             row_data = self.df.ix[i, ['sn', 'item', 'content', 'gmt_create']]
             if row_data['item'] != None and (
                     row_data['item'] == '无感对焦数据读取'
-                    or row_data['item'] == '无感对焦3600MM处读取数据'):
+                    or row_data['item'] == '无感对焦3600MM处读取数据'
+                    or row_data['item'] == '回程差读取'):
                 sn = row_data['sn'].strip()
-                if self.devices.__contains__(sn):
+                if sn == "":
                     continue
-                self.devices[sn] = 1
+
                 date = pd.Timestamp(row_data['gmt_create'])
                 date = date.strftime('%Y-%m-%dT%H:%M')
+                if type(row_data['content']) == str:
+                    cnt = row_data['content'].strip()
+                else:
+                    cnt = row_data['content']
+                backstep = row_data['item'] == '回程差读取'
 
-                cnt = row_data['content'].strip()
-                self.tof_datas.append(tofdata(sn, date, cnt))
+                if self.tof_datas.__contains__(sn):
+                    node = self.tof_datas[sn]
+                    if backstep == True:
+                        node.set_back_step(row_data['content'])
+                    else:
+                        node.set_tof_data(sn, date, cnt)
+                else:
+                    node = tofdata()
+                    if backstep == True:
+                        node.set_back_step(row_data['content'])
+                    else:
+                        node.set_tof_data(sn, date, cnt)
+
+                    self.tof_datas[sn] = node
 
     def print_data(self):
-        print("count = ", len(self.tof_datas))
-        for i in self.tof_datas:
+        print("count = ", len(self.tof_datas.values()))
+        for i in self.tof_datas.values():
             print(i.to_string())
 
     def write_excel(self):
@@ -175,7 +204,11 @@ class tof_check:
             dicts[h] = []
             dicts_raw[h] = []
 
-        for i in self.tof_datas:
+        dicts_raw['backstep'] = []
+
+        for i in self.tof_datas.values():
+            if i.sn == "":
+                continue
             dicts['sn'].append(i.sn)
             dicts_raw['sn'].append(i.sn)
             dicts['date'].append(i.date)
@@ -183,6 +216,8 @@ class tof_check:
             for h in headers:
                 dicts[h].append(i.get_diff_by_distance(int(h)))
                 dicts_raw[h].append(i.get_raw_and_thoery_by_distance(int(h)))
+
+            dicts_raw['backstep'].append(i.get_back_step())
 
         pds = pd.DataFrame.from_dict(dicts)
         pds.style.bar(
