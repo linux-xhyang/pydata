@@ -1,7 +1,12 @@
+#!/usr/bin/env python
+#_*_ coding:utf-8 _*_
+
 import datetime
+import getopt
 import math
 import os
 import re
+import sys
 
 import pandas as pd
 
@@ -57,7 +62,9 @@ class tofdata:
         self.theory_compute()
         self.diff_compute()
 
-    def set_back_step(self, step):
+    def set_back_step(self, sn, date, step):
+        self.sn = sn
+        self.date = date
         self.backstep = step
 
     def get_back_step(self):
@@ -128,14 +135,19 @@ class tofdata:
 
 
 class tof_check:
-    def __init__(self):
+    def __init__(self, path):
         self.tof_datas = {}
         self.devices = {}
-        base_dir = "/home/xhyang/Documents/TOF/135/TOF工厂测试数据/"
-        files = os.listdir(base_dir)
+        base_dir = path.rstrip()
 
-        for file in files:
-            path = base_dir + file
+        if os.path.isdir(base_dir):
+            files = os.listdir(base_dir)
+            for file in files:
+                real_path = base_dir + '/' + file
+                print("read file ", real_path)
+                self.df = pd.read_excel(real_path)
+                self.read_excel()
+        else:
             print("read file ", path)
             self.df = pd.read_excel(path)
             self.read_excel()
@@ -172,13 +184,13 @@ class tof_check:
                 if self.tof_datas.__contains__(sn):
                     node = self.tof_datas[sn]
                     if backstep == True:
-                        node.set_back_step(row_data['content'])
+                        node.set_back_step(sn, date, row_data['content'])
                     else:
                         node.set_tof_data(sn, date, cnt)
                 else:
                     node = tofdata()
                     if backstep == True:
-                        node.set_back_step(row_data['content'])
+                        node.set_back_step(sn, date, row_data['content'])
                     else:
                         node.set_tof_data(sn, date, cnt)
 
@@ -232,5 +244,8 @@ class tof_check:
             index=False)
 
 
-check = tof_check()
-#check.print_data()
+if __name__ == '__main__':
+    inputfile = sys.argv[1]
+
+    print('输入的文件为：', inputfile)
+    tof_check(os.path.abspath(inputfile))
