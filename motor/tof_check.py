@@ -164,6 +164,11 @@ class tof_check:
     def read_excel(self):
         heads = self.df.columns.values
         for i in self.df.index.values:
+            if not (self.df.__contains__('sn') and self.df.__contains__('item')
+                    and self.df.__contains__('content')
+                    and self.df.__contains__('gmt_create')) == True:
+                continue
+
             row_data = self.df.ix[i, ['sn', 'item', 'content', 'gmt_create']]
             if row_data['item'] != None and (
                     row_data['item'] == '无感对焦数据读取'
