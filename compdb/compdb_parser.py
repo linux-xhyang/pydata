@@ -4,6 +4,8 @@ import re
 import subprocess
 import sys
 
+back_list_projects = ["/common"]
+
 
 class Project:
     def __init__(self, dir):
@@ -63,6 +65,14 @@ def reserve_cmd(dir, cmd, debug):
     return cmd
 
 
+def is_blacklist_project(name):
+    cur_dir = os.getcwd()
+    for project in back_list_projects:
+        if (name.replace(cur_dir, "") == project):
+            return True
+    return False
+
+
 def compdb_parser(dir, file):
     rfile = open(file, "r")
     projects = {}
@@ -73,9 +83,8 @@ def compdb_parser(dir, file):
         'compdb', 'all'
     ]
 
-    proc = subprocess.Popen(command,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
+    proc = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     output = proc.stdout.read()
     json_data = json.loads(output, strict=False)
@@ -116,7 +125,7 @@ def compdb_parser(dir, file):
     print("project count ", len(projects))
     for name in projects.keys():
         print("project ", name)
-        if name.endswith("/common"):
-            print("skip project ", name)
+        if is_blacklist_project(name):
+            print(name + " is black list project")
         else:
             projects[name].compdb_write()
