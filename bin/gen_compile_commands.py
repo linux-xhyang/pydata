@@ -236,9 +236,10 @@ def main():
 
         for cmdfile in cmdfiles:
             with open(cmdfile, 'rt') as f:
-                result = line_matcher.match(f.readline())
+                result = line_matcher.match(f.readline().rstrip())
                 if result:
                     try:
+                        logging.info('parse file %s',cmdfile)
                         entry = process_line(directory, result.group(1),
                                              result.group(2))
                         compile_commands.append(entry)
