@@ -80,7 +80,7 @@ def compdb_parser(dir, file):
     os.chdir(dir)
     command = [
         os.path.join(os.path.dirname(__file__), "ninja"), '-f', file, '-t',
-        'compdb', 'all'
+        'compdb'
     ]
 
     proc = subprocess.Popen(
