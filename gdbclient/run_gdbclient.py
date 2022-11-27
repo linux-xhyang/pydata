@@ -15,34 +15,41 @@ if _GDBCLIENT_DIR not in sys.path:
 
 def main_impl(argv):
     file = ''
-
+    debugger = 'vscode-gdb'
+    host = '127.0.0.1'
     try:
-        opts, args = getopt.getopt(argv, "hf:", ["file="])
+        opts, args = getopt.getopt(argv, "hf:d:s:", ["file=","debugger="])
     except getopt.GetoptError:
-        print('pyfile.py -f <build-file>')
+        print('gdbclient -f <binary-file> -d <vscode-gdb/vscode-lldb> -s <device>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('pyfile.py -f <build-file>')
+            print('gdbclient -f <binary-file> -d <vscode-gdb/vscode-lldb> -s <device>')
             sys.exit()
         elif opt in ("-f", "--file"):
             file = arg
+        elif opt in ("-d", "--debugger"):
+            debugger = arg
+        elif opt in ("-s", "--serial"):
+            host = arg
 
     if os.path.exists(file) == True:
         root = os.environ["ANDROID_BUILD_TOP"]
         sysroot = os.path.join(os.environ["ANDROID_PRODUCT_OUT"], "symbols")
         is64bit = False
         linker_search_dir = os.path.join(sysroot,"system/bin")
-        debugger = "vscode-gdb"
-        debugger_path = "arm-linux-gdb"
-        port = 7777
+        if debugger == 'vscode-gdb':
+            debugger_path = "arm-linux-gdb"
+        else:
+            debugger_path = "~/src/android/prebuilts/clang/host/linux-x86/clang-r450784d/bin/lldb.sh"
+        port = 5039
         binary_file = open(file,"r")
-        setup_commands = gdbclient.generate_setup_script(debugger_path,sysroot,linker_search_dir,binary_file,is64bit,port,debugger,connect_timeout=5)
+        setup_commands = gdbclient.generate_setup_script(debugger_path,sysroot,linker_search_dir,binary_file,host,is64bit,port,debugger,connect_timeout=5)
         print("")
         print(setup_commands)
         print("")
     else:
-        print("file not exists")
+        print("binary file not exists")
 
 def main():
     main_impl(sys.argv[1:])

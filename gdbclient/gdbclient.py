@@ -265,7 +265,7 @@ def handle_switches(args, sysroot):
 
     return (binary_file, pid, run_cmd)
 
-def generate_vscode_lldb_script(root, sysroot, binary_name, port, solib_search_path):
+def generate_vscode_lldb_script(lldbpath,root, sysroot, binary_name, host, port, solib_search_path):
     # TODO It would be nice if we didn't need to copy this or run the
     #      gdbclient.py program manually. Doing this would probably require
     #      writing a vscode extension or modifying an existing one.
@@ -274,18 +274,23 @@ def generate_vscode_lldb_script(root, sysroot, binary_name, port, solib_search_p
     #       https://github.com/vadimcn/vscode-lldb/blob/6b775c439992b6615e92f4938ee4e211f1b060cf/extension/pickProcess.ts#L6
     res = {
         "name": "(lldbclient.py) Attach {} (port: {})".format(binary_name.split("/")[-1], port),
-        "type": "lldb",
+        "type": "lldb",         # vscode-lldb
         "request": "custom",
         "relativePathBase": root,
+        "args": [],
         "sourceMap": { "/b/f/w" : root, '': root, '.': root },
-        "initCommands": ['settings append target.exec-search-paths {}'.format(' '.join(solib_search_path))],
+        "initCommands": [
+            "platform select remote-android",
+'settings append target.exec-search-paths {}'.format(' '.join(solib_search_path)),
+            "settings set target.inherit-env false"
+        ],
         "targetCreateCommands": ["target create {}".format(binary_name),
                                  "target modules search-paths add / {}/".format(sysroot)],
-        "processCreateCommands": ["gdb-remote {}".format(port)]
+        "processCreateCommands": ["gdb-remote {}:{}".format(host,port)]
     }
     return json.dumps(res, indent=4)
 
-def generate_vscode_gdb_script(gdbpath, root, sysroot, binary_name, port, dalvik_gdb_script, solib_search_path):
+def generate_vscode_gdb_script(gdbpath, root, sysroot, binary_name, host, port, dalvik_gdb_script, solib_search_path):
     # TODO It would be nice if we didn't need to copy this or run the
     #      gdbclient.py program manually. Doing this would probably require
     #      writing a vscode extension or modifying an existing one.
@@ -296,7 +301,7 @@ def generate_vscode_gdb_script(gdbpath, root, sysroot, binary_name, port, dalvik
         "cwd": root,
         "program": binary_name,
         "MIMode": "gdb",
-        "miDebuggerServerAddress": "localhost:{}".format(port),
+        "miDebuggerServerAddress": "{}:{}".format(host,port),
         "miDebuggerPath": gdbpath,
         "setupCommands": [
             {
@@ -330,7 +335,7 @@ def generate_vscode_gdb_script(gdbpath, root, sysroot, binary_name, port, dalvik
         })
     return json.dumps(res, indent=4)
 
-def generate_gdb_script(root, sysroot, binary_name, port, dalvik_gdb_script, solib_search_path, connect_timeout):
+def generate_gdb_script(root, sysroot, binary_name, host, port, dalvik_gdb_script, solib_search_path, connect_timeout):
     solib_search_path = ":".join(solib_search_path)
 
     gdb_commands = ""
@@ -361,15 +366,15 @@ def target_remote_with_retry(target, timeout_seconds):
         return False
       time.sleep(min(0.25, time_left))
 
-target_remote_with_retry(':{}', {})
+target_remote_with_retry('{}:{}', {})
 
 end
-""".format(port, connect_timeout)
+""".format(host,port, connect_timeout)
 
     return gdb_commands
 
 
-def generate_lldb_script(root, sysroot, binary_name, port, solib_search_path):
+def generate_lldb_script(root, sysroot, binary_name, host, port, solib_search_path):
     commands = []
     commands.append(
         'settings append target.exec-search-paths {}'.format(' '.join(solib_search_path)))
@@ -379,11 +384,11 @@ def generate_lldb_script(root, sysroot, binary_name, port, solib_search_path):
     commands.append("settings append target.source-map '/b/f/w' '{}'".format(root))
     commands.append("settings append target.source-map '' '{}'".format(root))
     commands.append('target modules search-paths add / {}/'.format(sysroot))
-    commands.append('gdb-remote {}'.format(port))
+    commands.append('gdb-remote {}:{}'.format(host,port))
     return '\n'.join(commands)
 
 
-def generate_setup_script(debugger_path, sysroot, linker_search_dir, binary_file, is64bit, port, debugger, connect_timeout=5):
+def generate_setup_script(debugger_path, sysroot, linker_search_dir, binary_file, host,is64bit, port, debugger, connect_timeout=5):
     # Generate a setup script.
     # TODO: Detect the zygote and run 'art-on' automatically.
     root = os.environ["ANDROID_BUILD_TOP"]
@@ -406,15 +411,15 @@ def generate_setup_script(debugger_path, sysroot, linker_search_dir, binary_file
 
     if debugger == "vscode-gdb":
         return generate_vscode_gdb_script(
-            debugger_path, root, sysroot, binary_file.name, port, dalvik_gdb_script, solib_search_path)
+            debugger_path, root, sysroot, binary_file.name, host, port, dalvik_gdb_script, solib_search_path)
     if debugger == "vscode-lldb":
         return generate_vscode_lldb_script(
-            root, sysroot, binary_file.name, port, solib_search_path)
+            debugger_path,root, sysroot, binary_file.name, host, port, solib_search_path)
     elif debugger == "gdb":
-        return generate_gdb_script(root, sysroot, binary_file.name, port, dalvik_gdb_script, solib_search_path, connect_timeout)
+        return generate_gdb_script(root, sysroot, binary_file.name, host, port, dalvik_gdb_script, solib_search_path, connect_timeout)
     elif debugger == 'lldb':
         return generate_lldb_script(
-            root, sysroot, binary_file.name, port, solib_search_path)
+            root, sysroot, binary_file.name, host, port, solib_search_path)
     else:
         raise Exception("Unknown debugger type " + debugger)
 
@@ -432,6 +437,12 @@ def do_main():
 
     if device is None:
         sys.exit("ERROR: Failed to find device.")
+
+    if ":" in device.serial:
+        host = device.serial.split(":")[0]
+    else:
+        # lldb is broken with "localhost" right now (http://b/234034124)
+        host = "127.0.0.1"
 
     use_lldb = not args.no_lldb
     # Error check forwarding.
