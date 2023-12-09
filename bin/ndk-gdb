@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+THIS_DIR=$(cd "$(dirname "$0")" && pwd)
+PYDATA_ROOT=$(cd "$THIS_DIR/.." && pwd)
+. "$PYDATA_ROOT/bin/pydata_bin_common.sh"
+python "$PYDATA_ROOT/python-packages/ndkgdb/ndkgdb.py" "$@"
