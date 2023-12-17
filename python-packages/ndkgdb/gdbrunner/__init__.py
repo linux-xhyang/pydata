@@ -162,11 +162,8 @@ def start_gdbserver(device, gdbserver_local_path, gdbserver_remote_path,
 
     assert target_pid is None or run_cmd is None
 
-    if chroot:
-        run_as_cmd = ["chroot", chroot] + run_as_cmd
-
     # Remove the old socket file.
-    device.shell_nocheck(run_as_cmd + ["rm", debug_socket])
+    device.shell_nocheck(["rm", debug_socket])
 
     # Push gdbserver to the target.
     if gdbserver_local_path is not None:
@@ -190,9 +187,10 @@ def start_gdbserver(device, gdbserver_local_path, gdbserver_remote_path,
 
     forward_gdbserver_port(device, local=port, remote="localfilesystem:{}".format(chroot + debug_socket))
 
-    gdbserver_cmd = run_as_cmd + gdbserver_cmd
+    gdbserver_cmd = gdbserver_cmd
 
     if lldb:
+        print("lldb cmd:{}".format(gdbserver_cmd))
         gdbserver_output_path = os.path.join(tempfile.gettempdir(),
                                              "lldb-client.log")
         print("Redirecting lldb-server output to {}".format(gdbserver_output_path))
@@ -219,6 +217,7 @@ def forward_gdbserver_port(device, local, remote):
         print(WARNING +
               "Port forwarding may not work because adbd is not running as root. " +
               " Run `adb root` to fix." + ENDC)
+    print("forward tcp:{}".format(local) + " to:{}".format(remote))
     device.forward("tcp:{}".format(local), remote)
     atexit.register(lambda: device.forward_remove("tcp:{}".format(local)))
 

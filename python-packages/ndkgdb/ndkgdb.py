@@ -21,6 +21,7 @@ import argparse
 import contextlib
 import logging
 import os
+import json
 import posixpath
 import signal
 import subprocess
@@ -31,10 +32,14 @@ from typing import NoReturn
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import adb
 import gdbrunner
 
-NDK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+import adb
+import gdbrunner
+
+NDK_PATH = os.environ["ANDROID_NDK_HOME"]
 
 
 def log(msg: str) -> None:
@@ -363,7 +368,7 @@ def get_api_level(device: adb.AndroidDevice) -> int:
         api_str = device.get_prop("ro.build.version.sdk")
         if api_str is None:
             raise KeyError
-        api_level = int()
+        api_level = int(api_str)
     except (ValueError, KeyError):
         error(
             "Failed to find target device's supported API level.\n"
@@ -384,13 +389,6 @@ def fetch_abi(args: argparse.Namespace) -> str:
     which ones the device supports, then pick the one preferred by the device,
     so that we know which gdbserver to push and run on the device.
     """
-
-    app_abis = dump_var(args, "APP_ABI").split(" ")
-    if "all" in app_abis:
-        app_abis = dump_var(args, "NDK_ALL_ABIS").split(" ")
-    app_abis_msg = "Application ABIs: {}".format(", ".join(app_abis))
-    log(app_abis_msg)
-
     new_abi_props = ["ro.product.cpu.abilist"]
     old_abi_props = ["ro.product.cpu.abi", "ro.product.cpu.abi2"]
     abi_props = new_abi_props
@@ -407,7 +405,8 @@ def fetch_abi(args: argparse.Namespace) -> str:
     log(device_abis_msg)
 
     for abi in device_abis:
-        if abi in app_abis:
+        print(abi)
+        if abi is not None:
             # TODO(jmgao): Do we expect gdb to work with ARM-x86 translation?
             log("Selecting ABI: {}".format(abi))
             return abi
@@ -428,13 +427,15 @@ def get_run_as_cmd(user: str, cmd: list[str]) -> list[str]:
 def get_app_data_dir(args: argparse.Namespace, package_name: str) -> str:
     cmd = ["/system/bin/sh", "-c", "pwd", "2>/dev/null"]
     cmd = get_run_as_cmd(package_name, cmd)
+    print(str(cmd))
     device: adb.AndroidDevice = args.device
     (rc, stdout, _) = device.shell_nocheck(cmd)
     if rc != 0:
-        error(
-            "Could not find application's data directory. Are you sure that "
-            "the application is installed and debuggable?"
-        )
+        return "/data/data/" + package_name;
+        # error(
+        #     "Could not find application's data directory. Are you sure that "
+        #     "the application is installed and debuggable?"
+        # )
     data_dir = stdout.strip()
 
     # Applications with minSdkVersion >= 24 will have their data directories
@@ -514,7 +515,7 @@ def get_debugger_server_path(
     server_name: str,
     local_path: str,
 ) -> str:
-    app_debugger_server_path = "{}/lib/{}".format(app_data_dir, server_name)
+    app_debugger_server_path = "{}/{}".format(app_data_dir, server_name)
     cmd = ["ls", app_debugger_server_path, "2>/dev/null"]
     cmd = get_run_as_cmd(package_name, cmd)
     (rc, _, _) = args.device.shell_nocheck(cmd)
@@ -535,13 +536,12 @@ def get_debugger_server_path(
     # execution of binaries directly from /data/local/tmp.
     if get_api_level(args.device) >= 23:
         destination = "{}/{}-{}".format(app_data_dir, arch, server_name)
+        args.device.shell_nocheck(["rm",destination,"-rf"])
         log("Copying {} to {}.".format(server_name, destination))
         cmd = [
             "cat",
             remote_path,
             "|",
-            "run-as",
-            package_name,
             "sh",
             "-c",
             "'cat > {}'".format(destination),
@@ -550,7 +550,7 @@ def get_debugger_server_path(
         if rc != 0:
             error("Failed to copy {} to {}.".format(server_name, destination))
         (rc, _, _) = args.device.shell_nocheck(
-            ["run-as", package_name, "chmod", "700", destination]
+            ["chmod", "700", destination]
         )
         if rc != 0:
             error("Failed to chmod {} at {}.".format(server_name, destination))
@@ -860,12 +860,6 @@ def main() -> None:
     log("ADB command used: '{}'".format(" ".join(device.adb_cmd)))
     log("ADB version: {}".format(" ".join(adb_version.splitlines())))
 
-    project = find_project(args)
-    if args.package_name:
-        log("Attaching to specified package: {}".format(args.package_name))
-    else:
-        parse_manifest(args)
-
     pkg_name = args.package_name
 
     if args.launch is False:
@@ -877,18 +871,21 @@ def main() -> None:
     abi = fetch_abi(args)
     arch = abi_to_arch(abi)
 
-    out_dir = os.path.join(project, (dump_var(args, "TARGET_OUT", abi)))
+    out_dir = str(os.getcwd()) + "/.vscode"
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
     out_dir = os.path.realpath(out_dir)
-
+    print("gdbd dir " + str(out_dir))
     app_data_dir = get_app_data_dir(args, pkg_name)
 
     llvm_toolchain_dir = os.path.join(
         NDK_PATH, "toolchains", "llvm", "prebuilt", get_llvm_host_name()
     )
     if use_lldb:
+        print("use lldb")
         server_local_path = os.path.join(
             llvm_toolchain_dir,
-            "lib64",
+            "lib",
             "clang",
             get_llvm_package_version(llvm_toolchain_dir),
             "lib",
@@ -916,7 +913,7 @@ def main() -> None:
         kill_pids = [str(pid) for pid in kill_pids]
         if kill_pids:
             log("Killing processes: {}".format(", ".join(kill_pids)))
-            device.shell_nocheck(["run-as", pkg_name, "kill", "-9"] + kill_pids)
+            device.shell_nocheck(["kill", "-9"] + kill_pids)
 
     # Launch the application if needed, and get its pid
     if args.launch:
@@ -960,7 +957,7 @@ def main() -> None:
         run_cmd=None,
         debug_socket=debug_socket,
         port=args.port,
-        run_as_cmd=["run-as", pkg_name],
+        run_as_cmd=None,
         lldb=use_lldb,
     )
 
@@ -974,15 +971,53 @@ def main() -> None:
         )
         debugger_path = get_lldb_path(llvm_toolchain_dir)
         flags = []
+        launch_str = generate_vscode_lldb_script(debugger_path,out_dir,out_dir,zygote_path,args.port,out_dir,pid)
+        print(launch_str)
+        launch_path = out_dir + ("/launch.json")
+        print(launch_path)
+        # Open the file in write mode and write JSON data to it
+        if not os.path.exists(launch_path):
+            with open(launch_path, 'w') as file:
+                file.write(launch_str)
     else:
         script_commands = generate_gdb_script(
             args, out_dir, zygote_path, app_64bit, jdb_pid
         )
         debugger_path = os.path.join(ndk_bin_path(), "gdb")
         flags = ["--tui"] if args.tui else []
-    print(debugger_path)
-    gdbrunner.start_gdb(debugger_path, script_commands, flags, lldb=use_lldb)
 
+    print("")
+    input("Press enter to shutdown gdbserver")
+    #gdbrunner.start_gdb(debugger_path, script_commands, flags, lldb=use_lldb)
+
+
+def generate_vscode_lldb_script(lldbpath, root, sysroot, binary_name, port, solib_search_path,pid):
+    # TODO It would be nice if we didn't need to copy this or run the
+    #      gdbclient.py program manually. Doing this would probably require
+    #      writing a vscode extension or modifying an existing one.
+    # TODO: https://code.visualstudio.com/api/references/vscode-api#debug and
+    #       https://code.visualstudio.com/api/extension-guides/debugger-extension and
+    #       https://github.com/vadimcn/vscode-lldb/blob/6b775c439992b6615e92f4938ee4e211f1b060cf/extension/pickProcess.ts#L6
+    res = {
+        "name": "(lldbclient.py) Attach {} (port: {})".format(binary_name.split("/")[-1], port),
+        "type": "lldb",         # vscode-lldb
+        "request": "attach",
+        "pid": pid,
+        "initCommands": [
+            "platform select remote-android",
+            "settings set target.inherit-env false",
+            "gdb-remote {}".format(port)
+        ],
+        "postRunCommands": [
+            "add-dsym ",
+            "settings set target.source-map "
+        ]
+    }
+    configurations = {
+        "version":"0.2.0",
+        "configurations": [res]
+    }
+    return json.dumps(configurations, indent=4)
 
 if __name__ == "__main__":
     main()
