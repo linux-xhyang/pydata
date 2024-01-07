@@ -79,6 +79,30 @@ class ArgumentParser(gdbrunner.ArgumentParser):
         )
 
         self.add_argument(
+            "--build_path",
+            nargs="?",
+            dest="build_path",
+            default=False,
+            help="set build_path"
+        )
+
+        self.add_argument(
+            "--code_path",
+            nargs="?",
+            dest="code_path",
+            default=False,
+            help="set code_path"
+        )
+
+        self.add_argument(
+            "--target_path",
+            nargs="?",
+            dest="target_path",
+            default=False,
+            help="set target_path"
+        )
+
+        self.add_argument(
             "--force",
             "-f",
             action="store_true",
@@ -846,6 +870,9 @@ def main() -> None:
 
     pkg_name = args.package_name
     symdir = args.symdir
+    build_path = args.build_path
+    code_path = args.code_path
+    target_path = args.target_path
 
     if args.launch is False:
         log("Attaching to existing application process.")
@@ -956,7 +983,7 @@ def main() -> None:
         )
         debugger_path = get_lldb_path(llvm_toolchain_dir)
         flags = []
-        launch_str = generate_vscode_lldb_script(debugger_path,out_dir,out_dir,zygote_path,args.port,symdir,pid)
+        launch_str = generate_vscode_lldb_script(debugger_path,out_dir,out_dir,zygote_path,args.port,symdir,pid,build_path,code_path,target_path)
         print(launch_str)
         launch_path = out_dir + ("/launch.json")
         print(launch_path)
@@ -975,27 +1002,39 @@ def main() -> None:
     #gdbrunner.start_gdb(debugger_path, script_commands, flags, lldb=use_lldb)
 
 
-def generate_vscode_lldb_script(lldbpath, root, sysroot, binary_name, port, solib_search_path,pid):
+def generate_vscode_lldb_script(lldbpath, root, sysroot, binary_name, port, solib_search_path,pid,build_path,code_path,target_path):
     # TODO It would be nice if we didn't need to copy this or run the
     #      gdbclient.py program manually. Doing this would probably require
     #      writing a vscode extension or modifying an existing one.
     # TODO: https://code.visualstudio.com/api/references/vscode-api#debug and
     #       https://code.visualstudio.com/api/extension-guides/debugger-extension and
     #       https://github.com/vadimcn/vscode-lldb/blob/6b775c439992b6615e92f4938ee4e211f1b060cf/extension/pickProcess.ts#L6
+    initCommands = [
+        "settings set target.source-map {} {}".format(build_path, code_path)
+    ]
+
+    paths = solib_search_path.split(":")
+    for path in paths:
+        initCommands.append("settings append target.exec-search-paths {}".format(path))
+
+    commands = [
+        "platform select remote-android",
+        "settings set target.inherit-env false",
+        "platform connect connect://localhost:{}".format(port)
+    ]
+
+    for cmd in commands:
+        initCommands.append(cmd)
+    print("binary_name {} target_path {}".format(binary_name,target_path))
     res = {
         "name": "(lldbclient.py) Attach {} (port: {})".format(binary_name.split("/")[-1], port),
         "type": "lldb",         # vscode-lldb
         "request": "attach",
+        "initCommands": initCommands,
+        "sourceMap": { build_path : code_path },
         "pid": pid,
-        "initCommands": [
-            "platform select remote-android",
-            "settings set target.inherit-env false",
-            "platform connect connect://localhost:{}".format(port),
-            "process interrupt"
-        ],
-        "postRunCommands": [
-            "settings set target.exec-search-paths {}".format(solib_search_path)
-        ]
+        #"program" : target_path if target_path else binary_name,
+        "stopOnEntry": True
     }
     configurations = {
         "version":"0.2.0",
