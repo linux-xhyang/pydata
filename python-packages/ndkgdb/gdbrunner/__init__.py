@@ -176,16 +176,11 @@ def start_gdbserver(device, gdbserver_local_path, gdbserver_remote_path,
     # Run gdbserver.
     gdbserver_cmd = [gdbserver_remote_path]
     if lldb:
-        gdbserver_cmd.extend(["gdbserver", "unix://" + debug_socket])
+        gdbserver_cmd.extend(["platform", "--listen *:" + str(port)])
     else:
         gdbserver_cmd.extend(["--once", "+{}".format(debug_socket)])
 
-    if target_pid is not None:
-        gdbserver_cmd += ["--attach", str(target_pid)]
-    else:
-        gdbserver_cmd += ["--"] + run_cmd
-
-    forward_gdbserver_port(device, local=port, remote="localfilesystem:{}".format(chroot + debug_socket))
+    forward_gdbserver_port(device, local=port, remote="tcp:{}".format(port))
 
     gdbserver_cmd = gdbserver_cmd
 

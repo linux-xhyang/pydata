@@ -71,6 +71,14 @@ class ArgumentParser(gdbrunner.ArgumentParser):
         )
 
         self.add_argument(
+            "--symdir",
+            nargs="?",
+            dest="symdir",
+            default=False,
+            help="set symdir"
+        )
+
+        self.add_argument(
             "--force",
             "-f",
             action="store_true",
@@ -532,31 +540,6 @@ def get_debugger_server_path(
     remote_path = "/data/local/tmp/{}-{}".format(arch, server_name)
     args.device.push(local_path, remote_path)
 
-    # Copy debugger server into the data directory on M+, because selinux prevents
-    # execution of binaries directly from /data/local/tmp.
-    if get_api_level(args.device) >= 23:
-        destination = "{}/{}-{}".format(app_data_dir, arch, server_name)
-        args.device.shell_nocheck(["rm",destination,"-rf"])
-        log("Copying {} to {}.".format(server_name, destination))
-        cmd = [
-            "cat",
-            remote_path,
-            "|",
-            "sh",
-            "-c",
-            "'cat > {}'".format(destination),
-        ]
-        (rc, _, _) = args.device.shell_nocheck(cmd)
-        if rc != 0:
-            error("Failed to copy {} to {}.".format(server_name, destination))
-        (rc, _, _) = args.device.shell_nocheck(
-            ["chmod", "700", destination]
-        )
-        if rc != 0:
-            error("Failed to chmod {} at {}.".format(server_name, destination))
-
-        remote_path = destination
-
     log("Uploaded {} to {}".format(server_name, remote_path))
     return remote_path
 
@@ -819,6 +802,7 @@ def main() -> None:
             sys.exit(
                 "Environment variable '{}' not defined, have you run lunch?".format(env))
 
+    print("ndk path: {}".format(ndk_bin_path()))
     if sys.argv[1:2] == ["--internal-wakeup-pid-with-jdb"]:
         start_jdb(sys.argv[2:])
         return
@@ -861,6 +845,7 @@ def main() -> None:
     log("ADB version: {}".format(" ".join(adb_version.splitlines())))
 
     pkg_name = args.package_name
+    symdir = args.symdir
 
     if args.launch is False:
         log("Attaching to existing application process.")
@@ -971,14 +956,13 @@ def main() -> None:
         )
         debugger_path = get_lldb_path(llvm_toolchain_dir)
         flags = []
-        launch_str = generate_vscode_lldb_script(debugger_path,out_dir,out_dir,zygote_path,args.port,out_dir,pid)
+        launch_str = generate_vscode_lldb_script(debugger_path,out_dir,out_dir,zygote_path,args.port,symdir,pid)
         print(launch_str)
         launch_path = out_dir + ("/launch.json")
         print(launch_path)
         # Open the file in write mode and write JSON data to it
-        if not os.path.exists(launch_path):
-            with open(launch_path, 'w') as file:
-                file.write(launch_str)
+        with open(launch_path, 'w') as file:
+            file.write(launch_str)
     else:
         script_commands = generate_gdb_script(
             args, out_dir, zygote_path, app_64bit, jdb_pid
@@ -1006,11 +990,11 @@ def generate_vscode_lldb_script(lldbpath, root, sysroot, binary_name, port, soli
         "initCommands": [
             "platform select remote-android",
             "settings set target.inherit-env false",
-            "gdb-remote {}".format(port)
+            "platform connect connect://localhost:{}".format(port),
+            "process interrupt"
         ],
         "postRunCommands": [
-            "add-dsym ",
-            "settings set target.source-map "
+            "settings set target.exec-search-paths {}".format(solib_search_path)
         ]
     }
     configurations = {
