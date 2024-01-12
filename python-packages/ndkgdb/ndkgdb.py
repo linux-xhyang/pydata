@@ -1009,14 +1009,17 @@ def generate_vscode_lldb_script(lldbpath, root, sysroot, binary_name, port, soli
     # TODO: https://code.visualstudio.com/api/references/vscode-api#debug and
     #       https://code.visualstudio.com/api/extension-guides/debugger-extension and
     #       https://github.com/vadimcn/vscode-lldb/blob/6b775c439992b6615e92f4938ee4e211f1b060cf/extension/pickProcess.ts#L6
-    initCommands = [
-        "settings set target.source-map {} {}".format(build_path, code_path)
-    ]
+    preRunCommands = []
+    postRunCommands = []
+
+    if build_path:
+        postRunCommands.append("settings set target.source-map {} {}".format(os.path.abspath(build_path), os.path.abspath(code_path)))
 
     paths = solib_search_path.split(":")
     for path in paths:
-        initCommands.append("settings append target.exec-search-paths {}".format(path))
+        preRunCommands.append("settings append target.exec-search-paths {}".format(os.path.abspath(path)))
 
+    initCommands = []
     commands = [
         "platform select remote-android",
         "settings set target.inherit-env false",
@@ -1030,12 +1033,16 @@ def generate_vscode_lldb_script(lldbpath, root, sysroot, binary_name, port, soli
         "name": "(lldbclient.py) Attach {} (port: {})".format(binary_name.split("/")[-1], port),
         "type": "lldb",         # vscode-lldb
         "request": "attach",
-        "initCommands": initCommands,
-        "sourceMap": { build_path : code_path },
         "pid": pid,
+        "initCommands": initCommands,
+        "preRunCommands": preRunCommands,
+        "postRunCommands": postRunCommands,
         #"program" : target_path if target_path else binary_name,
         "stopOnEntry": True
     }
+
+    if build_path:
+        res["sourceMap"] = { build_path : code_path },
     configurations = {
         "version":"0.2.0",
         "configurations": [res]
