@@ -1042,7 +1042,7 @@ def generate_vscode_lldb_script(lldbpath, root, sysroot, binary_name, port, soli
     }
 
     if build_path:
-        res["sourceMap"] = { build_path : code_path },
+        res["sourceMap"] = { build_path : code_path }
     configurations = {
         "version":"0.2.0",
         "configurations": [res]
