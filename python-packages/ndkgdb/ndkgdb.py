@@ -1015,9 +1015,10 @@ def generate_vscode_lldb_script(lldbpath, root, sysroot, binary_name, port, soli
     if build_path:
         postRunCommands.append("settings set target.source-map {} {}".format(os.path.abspath(build_path), os.path.abspath(code_path)))
 
-    paths = solib_search_path.split(":")
-    for path in paths:
-        preRunCommands.append("settings append target.exec-search-paths {}".format(os.path.abspath(path)))
+    if solib_search_path:
+        paths = solib_search_path.split(":")
+        for path in paths:
+            preRunCommands.append("settings append target.exec-search-paths {}".format(os.path.abspath(path)))
 
     initCommands = []
     commands = [
