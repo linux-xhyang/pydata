@@ -21,6 +21,7 @@ import argparse
 import atexit
 import os
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -176,11 +177,13 @@ def start_gdbserver(device, gdbserver_local_path, gdbserver_remote_path,
     # Run gdbserver.
     gdbserver_cmd = [gdbserver_remote_path]
     if lldb:
-        gdbserver_cmd.extend(["platform", "--listen *:" + str(port)])
+        #gdbserver_cmd.extend(["platform", "--log-file", "/data/local/tmp/lldb-server.log","--server", "--listen *:" + str(port)])
+        gdbserver_cmd.extend(["platform", "--log-file", "/data/local/tmp/lldb-server.log","--server", "--listen", "unix-abstract://" + debug_socket])
     else:
         gdbserver_cmd.extend(["--once", "+{}".format(debug_socket)])
 
-    forward_gdbserver_port(device, local=port, remote="tcp:{}".format(port))
+    #forward_gdbserver_port(device, local=port, remote="tcp:{}".format(port))
+    forward_gdbserver_port(device, local=port, remote="localfilesystem:{}".format(chroot + debug_socket))
 
     gdbserver_cmd = gdbserver_cmd
 

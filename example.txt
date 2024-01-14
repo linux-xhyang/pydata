@@ -1,0 +1,1 @@
+~/src/pydata/bin/ndk-gdb  --lldb --attach mediaserver --symdir /home/xhyang/src/android/out/target/product/vsoc_x86_64_only/symbols/system/lib64/:/home/xhyang/src/android/out/target/product/vsoc_x86_64_only/symbols/system/bin --build_path /home/vsoc-01/build --code_path ~/src/android --target_path ~/src/android/out/target/product/vsoc_x86_64_only/symbols/system/bin/mediaserver

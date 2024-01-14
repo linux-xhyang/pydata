@@ -113,7 +113,7 @@ class ArgumentParser(gdbrunner.ArgumentParser):
             "--port",
             type=int,
             nargs="?",
-            default="5039",
+            default="6039",
             help="override the port used on the host.",
         )
 
@@ -561,7 +561,7 @@ def get_debugger_server_path(
             server_name, app_debugger_server_path
         )
     )
-    remote_path = "/data/local/tmp/{}-{}".format(arch, server_name)
+    remote_path = "/data/{}-{}".format(arch, server_name)
     args.device.push(local_path, remote_path)
 
     log("Uploaded {} to {}".format(server_name, remote_path))
@@ -959,7 +959,7 @@ def main() -> None:
         zygote_path = os.path.join(out_dir, "system", "bin", "app_process")
 
     # Start gdbserver.
-    debug_socket = posixpath.join(app_data_dir, "debug_socket")
+    debug_socket = posixpath.join("/data/local/tmp", "debug_socket")
     log("Starting {}...".format(server_name))
     gdbrunner.start_gdbserver(
         device,
@@ -983,7 +983,7 @@ def main() -> None:
         )
         debugger_path = get_lldb_path(llvm_toolchain_dir)
         flags = []
-        launch_str = generate_vscode_lldb_script(debugger_path,out_dir,out_dir,zygote_path,args.port,symdir,pid,build_path,code_path,target_path)
+        launch_str = generate_vscode_lldb_script(debugger_path,out_dir,out_dir,zygote_path,args.port,symdir,pid,build_path,code_path,target_path,debug_socket)
         print(launch_str)
         launch_path = out_dir + ("/launch.json")
         print(launch_path)
@@ -1002,33 +1002,40 @@ def main() -> None:
     #gdbrunner.start_gdb(debugger_path, script_commands, flags, lldb=use_lldb)
 
 
-def generate_vscode_lldb_script(lldbpath, root, sysroot, binary_name, port, solib_search_path,pid,build_path,code_path,target_path):
+def generate_vscode_lldb_script(lldbpath, root, sysroot, binary_name, port, solib_search_path,pid,build_path,code_path,target_path,debug_socket):
     # TODO It would be nice if we didn't need to copy this or run the
     #      gdbclient.py program manually. Doing this would probably require
     #      writing a vscode extension or modifying an existing one.
     # TODO: https://code.visualstudio.com/api/references/vscode-api#debug and
     #       https://code.visualstudio.com/api/extension-guides/debugger-extension and
     #       https://github.com/vadimcn/vscode-lldb/blob/6b775c439992b6615e92f4938ee4e211f1b060cf/extension/pickProcess.ts#L6
+    initCommands = []
     preRunCommands = []
+    processCreateCommands = []
     postRunCommands = []
 
-    if build_path:
-        postRunCommands.append("settings set target.source-map {} {}".format(os.path.abspath(build_path), os.path.abspath(code_path)))
+    commands = [
+        "settings set target.inherit-env false",
+        "platform select remote-android",
+        #"platform connect connect://localhost:{}".format(port),
+        "platform connect unix-abstract-connect://{}".format(debug_socket),
+        "settings set plugin.process.gdb-remote.packet-timeout 60",
+        #"settings set target.preload-symbols false",
+        "settings set target.source-map {} {}".format(os.path.abspath(build_path), os.path.abspath(code_path))
+    ]
+
+    for cmd in commands:
+        initCommands.append(cmd)
 
     if solib_search_path:
         paths = solib_search_path.split(":")
         for path in paths:
             preRunCommands.append("settings append target.exec-search-paths {}".format(os.path.abspath(path)))
 
-    initCommands = []
-    commands = [
-        "platform select remote-android",
-        "settings set target.inherit-env false",
-        "platform connect connect://localhost:{}".format(port)
-    ]
+    if build_path:
+        postRunCommands.append("settings set target.source-map {} {}".format(os.path.abspath(build_path), os.path.abspath(code_path)))
 
-    for cmd in commands:
-        initCommands.append(cmd)
+    processCreateCommands.append("process attach -p {}".format(pid))
     print("binary_name {} target_path {}".format(binary_name,target_path))
     res = {
         "name": "(lldbclient.py) Attach {} (port: {})".format(binary_name.split("/")[-1], port),
@@ -1037,6 +1044,7 @@ def generate_vscode_lldb_script(lldbpath, root, sysroot, binary_name, port, soli
         "pid": pid,
         "initCommands": initCommands,
         "preRunCommands": preRunCommands,
+        #"processCreateCommands": processCreateCommands,
         "postRunCommands": postRunCommands,
         #"program" : target_path if target_path else binary_name,
         "stopOnEntry": True
